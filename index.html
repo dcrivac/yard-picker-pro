@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html lang="en" style="background:#ffffff">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yard Picker Pro — Find the Gold in the Junkyard</title>
+<meta name="description" content="AI-powered tool that tells you exactly which cars at your local junkyard have the most valuable parts to pull and sell on eBay.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Force light mode — ignore system dark mode */
+:root { color-scheme: light; }
+html  { background: #ffffff; color: #0f0f0f; }
+body  { background: #ffffff; color: #0f0f0f; font-family: ‘Space Mono’, monospace; overflow-x: hidden; }
+
+/* NAV */
+nav {
+position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+display: flex; justify-content: space-between; align-items: center;
+padding: 18px 32px;
+background: #ffffff;
+border-bottom: 1px solid #e8e4e0;
+}
+.nav-logo { font-family: ‘Syne’, sans-serif; font-size: 16px; font-weight: 800; color: #0f0f0f; letter-spacing: -0.5px; }
+.nav-logo span { color: #ff6b00; }
+.nav-cta {
+background: #ff6b00; color: #ffffff; border: none;
+padding: 10px 20px; font-family: ‘Space Mono’, monospace;
+font-size: 11px; font-weight: 700; letter-spacing: 1px;
+cursor: pointer; text-decoration: none; border-radius: 2px;
+}
+
+/* HERO */
+.hero {
+background: #ffffff;
+min-height: 100vh;
+display: flex; flex-direction: column; justify-content: center;
+padding: 120px 32px 80px;
+}
+.eyebrow { font-size: 11px; letter-spacing: 3px; color: #ff6b00; font-weight: 700; margin-bottom: 20px; }
+h1 {
+font-family: ‘Syne’, sans-serif;
+font-size: clamp(48px, 9vw, 96px);
+font-weight: 800; line-height: .95; letter-spacing: -3px;
+color: #0f0f0f;
+max-width: 800px;
+}
+h1 .org { color: #ff6b00; }
+h1 .faint { color: #ccc; }
+.hero-sub {
+font-size: clamp(15px, 2vw, 18px);
+color: #333;
+max-width: 520px;
+margin-top: 28px; line-height: 2;
+}
+.hero-sub strong { color: #0f0f0f; font-weight: 700; }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 36px; }
+.btn-pri {
+background: #ff6b00; color: #ffffff; border: none;
+padding: 16px 32px; font-family: ‘Space Mono’, monospace;
+font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+cursor: pointer; text-decoration: none; border-radius: 2px; display: inline-block;
+}
+.btn-sec {
+background: #ffffff; color: #555;
+border: 2px solid #ccc; padding: 16px 32px;
+font-family: ‘Space Mono’, monospace;
+font-size: 12px; font-weight: 700; letter-spacing: 1px;
+cursor: pointer; text-decoration: none; border-radius: 2px; display: inline-block;
+}
+.stats {
+display: flex; gap: 48px; flex-wrap: wrap;
+margin-top: 60px; padding-top: 36px;
+border-top: 1px solid #e8e4e0;
+}
+.stat-v { font-family: ‘Syne’, sans-serif; font-size: 32px; font-weight: 800; color: #ff6b00; }
+.stat-l { font-size: 10px; color: #888; letter-spacing: 2px; margin-top: 4px; }
+
+/* SECTIONS */
+.sec-white  { background: #ffffff; padding: 90px 32px; }
+.sec-warm   { background: #f5f1eb; padding: 90px 32px; }
+.sec-warm2  { background: #ede8e0; padding: 90px 32px; }
+.sec-dark   { background: #0f0f0f; padding: 90px 32px; }
+.sec-rule   { border: none; border-top: 1px solid #e8e4e0; }
+
+.lbl { font-size: 11px; letter-spacing: 3px; color: #ff6b00; font-weight: 700; margin-bottom: 14px; }
+.lbl-dark { font-size: 11px; letter-spacing: 3px; color: #ff6b00; font-weight: 700; margin-bottom: 14px; }
+h2 {
+font-family: ‘Syne’, sans-serif;
+font-size: clamp(28px, 4vw, 46px);
+font-weight: 800; letter-spacing: -1.5px;
+line-height: 1.05; max-width: 600px;
+margin-bottom: 20px; color: #0f0f0f;
+}
+h2.light { color: #ffffff; }
+.body-text { font-size: 14px; color: #444; line-height: 1.9; max-width: 500px; margin-bottom: 36px; }
+.body-text-dark { font-size: 14px; color: #aaa; line-height: 1.9; max-width: 500px; margin: 0 auto 36px; text-align: center; }
+
+/* HOW IT WORKS */
+.steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 2px; margin-top: 40px; }
+.step-card {
+background: #ffffff; padding: 32px; position: relative; overflow: hidden;
+border: 1px solid #ece8e4;
+}
+.step-card::before {
+content: attr(data-n); position: absolute; top: 20px; right: 20px;
+font-family: ‘Syne’, sans-serif; font-size: 60px; font-weight: 800;
+color: #f0ece6; line-height: 1;
+}
+.step-icon { font-size: 30px; margin-bottom: 14px; }
+.step-name { font-size: 15px; font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
+.step-desc { font-size: 13px; color: #555; line-height: 1.8; }
+.step-desc strong { color: #0f0f0f; }
+
+/* MATH EXAMPLE */
+.ex-card {
+background: #f5f1eb; border: 1px solid #e8e3db;
+border-left: 4px solid #ff6b00;
+padding: 20px; margin-bottom: 10px;
+display: flex; justify-content: space-between; align-items: center; gap: 16px;
+}
+.ex-name { font-size: 15px; font-weight: 700; color: #0f0f0f; }
+.ex-meta { font-size: 11px; color: #888; margin-top: 3px; }
+.ex-profit { font-family: ‘Syne’, sans-serif; font-size: 24px; font-weight: 800; color: #ff6b00; }
+.ex-sub { font-size: 10px; color: #888; text-align: right; margin-top: 2px; }
+.math {
+background: #ffffff; border: 1px solid #e8e3db; padding: 24px;
+font-size: 12px; max-width: 560px;
+}
+.mrow {
+display: flex; justify-content: space-between;
+padding: 5px 0; border-bottom: 1px solid #f0ece6; color: #555;
+}
+.mrow:last-child { border: none; padding-top: 10px; margin-top: 6px; border-top: 2px solid #e8e3db; }
+.mrow .mk { color: #777; }
+.mrow .mv { font-weight: 600; color: #0f0f0f; }
+.mrow .mv.pos { color: #ff6b00; font-family: ‘Syne’, sans-serif; font-size: 18px; font-weight: 800; }
+.mrow .mv.neg { color: #cc3300; }
+.mrow .mv.dim { color: #999; }
+.disc-text { font-size: 10px; color: #aaa; margin-top: 10px; max-width: 560px; line-height: 1.7; }
+
+/* FAQ */
+.faq { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 28px; margin-top: 40px; }
+.faq-q { font-size: 14px; font-weight: 700; color: #0f0f0f; margin-bottom: 8px; }
+.faq-a { font-size: 13px; color: #555; line-height: 1.9; }
+.faq-a a { color: #ff6b00; text-decoration: none; }
+
+/* GITHUB */
+.gh-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px,1fr)); gap: 14px; max-width: 700px; margin: 0 auto 36px; }
+.gh-feat { background: #1a1a1a; border: 1px solid #252525; padding: 18px; border-radius: 2px; }
+.gh-feat-t { font-size: 12px; font-weight: 700; color: #ffffff; margin-bottom: 6px; }
+.gh-feat-d { font-size: 11px; color: #888; line-height: 1.6; }
+.center { text-align: center; }
+
+/* FOOTER */
+footer {
+background: #0f0f0f; padding: 32px;
+display: flex; justify-content: space-between; align-items: center;
+flex-wrap: wrap; gap: 12px;
+border-top: 1px solid #1a1a1a;
+}
+.foot-logo { font-family: ‘Syne’, sans-serif; font-size: 14px; font-weight: 800; color: #ffffff; }
+.foot-logo span { color: #ff6b00; }
+.foot-links { display: flex; gap: 24px; }
+.foot-links a { font-size: 11px; color: #666; text-decoration: none; letter-spacing: 1px; }
+.foot-links a:hover { color: #ff6b00; }
+.foot-note { font-size: 10px; color: #333; width: 100%; margin-top: 8px; }
+
+/* REVEAL */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.reveal { opacity:0; transform:translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+.reveal.visible { opacity:1; transform:translateY(0); }
+
+/* MOBILE */
+@media (max-width:600px) {
+nav { padding: 14px 20px; }
+.hero, .sec-white, .sec-warm, .sec-warm2, .sec-dark { padding-left: 20px; padding-right: 20px; }
+.stats { gap: 28px; }
+footer { padding: 24px 20px; }
+}
+</style>
+
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">YARD PICKER <span>PRO</span></div>
+  <a href="https://crivac.com/yp2.html" class="nav-cta" target="_blank">OPEN APP →</a>
+</nav>
+
+<!-- HERO -->
+
+<div class="hero">
+  <div class="eyebrow">FREE · OPEN SOURCE · AI-POWERED</div>
+  <h1>Find the<br><span class="org">gold</span><br>in the junkyard<span class="faint">.</span></h1>
+  <p class="hero-sub">
+    Walk into a Pick Your Part junkyard knowing exactly <strong>which cars have the most valuable parts</strong> — and exactly how much profit you'll make pulling and selling each one on eBay. <strong>No car knowledge needed.</strong>
+  </p>
+  <div class="actions">
+    <a href="https://crivac.com/yp2.html" class="btn-pri" target="_blank">TRY IT FREE →</a>
+    <a href="https://github.com/yourusername/yard-picker-pro" class="btn-sec" target="_blank">VIEW ON GITHUB</a>
+  </div>
+  <div class="stats">
+    <div><div class="stat-v">~$0.02</div><div class="stat-l">COST PER SESSION</div></div>
+    <div><div class="stat-v">200+</div><div class="stat-l">VEHICLES READ AT ONCE</div></div>
+    <div><div class="stat-v">30s</div><div class="stat-l">TO FULL PULL LIST</div></div>
+    <div><div class="stat-v">100%</div><div class="stat-l">TRANSPARENT MATH</div></div>
+  </div>
+</div>
+
+<hr class="sec-rule">
+
+<!-- HOW IT WORKS -->
+
+<div class="sec-white">
+  <div class="lbl">HOW IT WORKS</div>
+  <h2>Three steps.<br>Zero guesswork.</h2>
+  <p class="body-text">You don't need to know anything about cars. The AI does the research — you just show up and pull the right parts.</p>
+  <div class="steps">
+    <div class="step-card reveal" data-n="1">
+      <div class="step-icon">🔗</div>
+      <div class="step-name">Paste your yard's URL</div>
+      <div class="step-desc">Open <strong>pyp.com</strong>, go to your yard's Vehicle Inventory page, copy the URL, paste it in. The app fetches the <strong>full inventory automatically</strong> — every car, every page.</div>
+    </div>
+    <div class="step-card reveal" data-n="2">
+      <div class="step-icon">🔍</div>
+      <div class="step-name">Search &amp; select</div>
+      <div class="step-desc">200+ cars load instantly. <strong>Search by make, model, or year.</strong> Tap the ones you want analyzed, or let the AI rank the whole yard.</div>
+    </div>
+    <div class="step-card reveal" data-n="3">
+      <div class="step-icon">💰</div>
+      <div class="step-name">Get your pull list</div>
+      <div class="step-desc">AI finds the <strong>5 most profitable parts per car</strong> with full profit breakdown — eBay price, LKQ cost, labor, fees, shipping. Net profit shown per part.</div>
+    </div>
+  </div>
+</div>
+
+<hr class="sec-rule">
+
+<!-- WHAT YOU GET -->
+
+<div class="sec-warm">
+  <div class="lbl">WHAT THE PULL LIST LOOKS LIKE</div>
+  <h2>Every number.<br>Every source.</h2>
+  <p class="body-text">This isn't a guess. Every calculation shows exactly where the numbers come from so you can decide before pulling a single bolt.</p>
+  <div style="max-width:560px">
+    <div class="ex-card reveal">
+      <div><div class="ex-name">🥇 2008 BMW 535i</div><div class="ex-meta">Row C12 · 7.2h pull · $61/hr</div></div>
+      <div><div class="ex-profit">$442</div><div class="ex-sub">PROFIT POTENTIAL</div></div>
+    </div>
+    <div class="math reveal">
+      <div class="mrow"><span class="mk">Part</span><span class="mv">ECU / PCM</span></div>
+      <div class="mrow"><span class="mk">eBay avg sold <span style="font-size:10px;color:#bbb">(AI estimate)</span></span><span class="mv">$420</span></div>
+      <div class="mrow"><span class="mk">eBay price range</span><span class="mv dim">$280 – $600</span></div>
+      <div class="mrow"><span class="mk">LKQ part cost <span style="font-size:10px;color:#bbb">(PYP list)</span></span><span class="mv neg">–$75</span></div>
+      <div class="mrow"><span class="mk">Labor (0.8h × $20/hr)</span><span class="mv neg">–$16</span></div>
+      <div class="mrow"><span class="mk">eBay fees (13.25%)</span><span class="mv neg">–$56</span></div>
+      <div class="mrow"><span class="mk">Estimated shipping</span><span class="mv neg">–$25</span></div>
+      <div class="mrow"><span class="mk" style="color:#333;font-weight:700">NET PROFIT</span><span class="mv pos">$248</span></div>
+    </div>
+    <p class="disc-text">eBay prices are AI-estimated. LKQ costs from published PYP price list. Always verify on eBay before pulling — each part links directly to eBay sold listings.</p>
+  </div>
+</div>
+
+<hr class="sec-rule">
+
+<!-- FAQ -->
+
+<div class="sec-warm2">
+  <div class="lbl">COMMON QUESTIONS</div>
+  <h2>No jargon.<br>Real answers.</h2>
+  <div class="faq">
+    <div class="reveal"><div class="faq-q">Do I need to know about cars?</div><div class="faq-a">Not at all. The AI knows which parts from which cars sell well on eBay. You just need a wrench and willingness to get your hands dirty.</div></div>
+    <div class="reveal"><div class="faq-q">What is a Pick Your Part junkyard?</div><div class="faq-a">A self-service salvage yard at <a href="https://www.pyp.com" target="_blank">pyp.com</a>. You pay a small entry fee, walk the rows of old cars, pull the parts yourself, and pay a fixed price per part. Parts can be resold on eBay for profit.</div></div>
+    <div class="reveal"><div class="faq-q">How accurate are the profit estimates?</div><div class="faq-a">Directionally accurate — best used as a ranking tool. eBay prices are AI-estimated and can vary ±20-40%. Always verify on eBay before pulling. Every part has a direct eBay sold listings link.</div></div>
+    <div class="reveal"><div class="faq-q">What does it cost?</div><div class="faq-a">You need an Anthropic API key — $5 gets ~300 sessions at about $0.015 each. The app is free and open source. No subscription.</div></div>
+    <div class="reveal"><div class="faq-q">Does it work at any yard?</div><div class="faq-a">Currently works with Pick Your Part (pyp.com) yards across the US. More chains coming.</div></div>
+    <div class="reveal"><div class="faq-q">Is my data private?</div><div class="faq-a">Yes. Your API key lives in a PHP file on your own server — never in the browser. No accounts, no tracking.</div></div>
+  </div>
+</div>
+
+<!-- GITHUB -->
+
+<div class="sec-dark">
+  <div class="lbl-dark center">OPEN SOURCE</div>
+  <h2 class="light center" style="max-width:100%;text-align:center">Built in public.<br>Improve it together.</h2>
+  <p class="body-text-dark">Yard Picker Pro is fully open source. Ideas for new features, better pricing, or more yard chains — pull requests welcome.</p>
+  <div class="gh-grid">
+    <div class="gh-feat reveal"><div class="gh-feat-t">🔧 Add new yards</div><div class="gh-feat-d">Help add U-Pull-It, Pull-A-Part, and other chains.</div></div>
+    <div class="gh-feat reveal"><div class="gh-feat-t">📈 Better pricing</div><div class="gh-feat-d">Improve eBay accuracy with live data sources.</div></div>
+    <div class="gh-feat reveal"><div class="gh-feat-t">🗺 Part location maps</div><div class="gh-feat-d">Show which row to walk to for each car.</div></div>
+    <div class="gh-feat reveal"><div class="gh-feat-t">📱 Native iOS app</div><div class="gh-feat-d">React Native version for offline capability.</div></div>
+  </div>
+  <div class="actions center" style="justify-content:center">
+    <a href="https://github.com/yourusername/yard-picker-pro" class="btn-pri" target="_blank">VIEW ON GITHUB →</a>
+    <a href="https://crivac.com/yp2.html" class="btn-sec" style="border-color:#333;color:#888" target="_blank">TRY THE APP</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+
+<footer>
+  <div class="foot-logo">YARD PICKER <span>PRO</span></div>
+  <div class="foot-links">
+    <a href="https://crivac.com/yp2.html" target="_blank">OPEN APP</a>
+    <a href="https://github.com/yourusername/yard-picker-pro" target="_blank">GITHUB</a>
+    <a href="https://console.anthropic.com" target="_blank">GET API KEY</a>
+  </div>
+  <div class="foot-note">Free · Open source · No affiliation with LKQ, Pick Your Part, or eBay · eBay prices are AI estimates — always verify before pulling</div>
+</footer>
+
+<script>
+var obs = new IntersectionObserver(function(entries){
+  entries.forEach(function(e){ if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold:0.1});
+document.querySelectorAll('.reveal').forEach(function(el){ obs.observe(el); });
+</script>
+
+</body>
+</html>
