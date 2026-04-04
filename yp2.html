@@ -553,7 +553,7 @@ function runAnalyze(){
           });
           return bestKey ? LAB[bestKey] : null;
         }
-        var avg=Number(p.ebayAvg)||80,lkq=Number(p.lkqPrice)||lkqLookup(p.name)||50,hrs=labLookup(p.name)||1.0;
+        var avg=Number(p.ebayAvg)||80,lkq=LKQ[p.name]||Number(p.lkqPrice)||lkqLookup(p.name)||50,hrs=labLookup(p.name)||1.0;
         L('  Part: ['+p.name+'] server price: $'+lkq+' matched: '+(p.lkqMatched||'none'));
         var labor=hrs*rate,fees=avg*EFEE,net=avg-lkq-labor-fees-ESHIP;
         return{name:p.name,reason:p.reason||'',ebayAvg:avg,ebayLow:p.ebayLow||Math.round(avg*.65),ebayHigh:p.ebayHigh||Math.round(avg*1.4),lkqCost:lkq,pullHrs:hrs,laborCost:labor,ebayFees:fees,netProfit:net};
