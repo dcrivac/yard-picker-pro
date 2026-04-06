@@ -111,14 +111,14 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
     <input type="text" id="search" placeholder="Search: BMW, 2007 Toyota, Silverado..." autocorrect="off" autocapitalize="none" spellcheck="false" style="flex:1;margin-bottom:0" oninput="filterVlist()">
     <button onclick="clearSearch()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#555;padding:12px 14px;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">✕ Clear</button>
   </div>
-  <div id="vcount" style="font-size:10px;color:#555;letter-spacing:1px;margin-bottom:8px"></div>
-  <div id="vlist"></div>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
     <span style="font-size:12px;color:#888">Your labor rate:</span>
     <input type="number" id="rate" value="20">
     <span style="font-size:12px;color:#555">/hr</span>
   </div>
-  <button class="btn g" id="bAnalyze" style="font-size:16px;padding:20px;letter-spacing:1px;margin-top:8px">⚡  FIND MOST PROFITABLE PARTS</button>
+  <button class="btn g" id="bAnalyze" style="font-size:16px;padding:20px;letter-spacing:1px;margin-bottom:12px">⚡  FIND MOST PROFITABLE PARTS</button>
+  <div id="vcount" style="font-size:10px;color:#555;letter-spacing:1px;margin-bottom:8px"></div>
+  <div id="vlist" style="max-height:40vh;overflow-y:auto;border:1px solid #1a1a1a;border-radius:4px;padding:4px 0"></div>
   <button class="btn w" id="bMore" style="display:none">Load More Vehicles →</button>
 </div>
 
