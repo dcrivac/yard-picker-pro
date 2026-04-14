@@ -604,7 +604,7 @@ function renderResults(rate){
       var nc=p.netProfit>=50?'#00ff88':p.netProfit>0?'#aacc55':'#666';
       var eu='https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+p.name)+'&LH_Sold=1&LH_Complete=1';
       h+='<div class="prow">';
-      h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right">'+fmtD(p.netProfit)+'</span></div>';
+      h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right;color:#aaa">'+fmtD(p.ebayAvg)+' eBay</span></div>';
       if(p.reason)h+='<div class="pr">'+p.reason+'</div>';
       h+='<div class="pb">';
       h+='<div><span class="k">eBay avg <span style="font-size:9px;color:#333">(AI est.)</span></span><span class="v vp">'+fmtD(p.ebayAvg)+'</span></div>';
