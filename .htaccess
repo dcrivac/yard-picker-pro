@@ -1,0 +1,6 @@
+# Prevent HTML files from being cached by CDN or browser
+<FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+</FilesMatch>
