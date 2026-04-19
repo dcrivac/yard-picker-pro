@@ -132,7 +132,7 @@ if ($resp && isset($resp['content'])) {
                         if (isset($car['parts']) && is_array($car['parts'])) {
                             foreach ($car['parts'] as &$part) {
                                 $result = findLKQPrice($part['name'], $LKQ);
-                                $part['lkqPrice'] = $result['price'];
+                                $part['lkqPrice'] = round($result['price'], 2);
                                 $part['lkqMatched'] = $result['matched'];
                             }
                         }

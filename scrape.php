@@ -13,8 +13,7 @@ if (!$url && !$slug) {
     exit;
 }
 
-$log[] = 'URL: ' . $url;
-$log[] = 'slug param: ' . $slug;
+$log[] = '▶ Fetching inventory for: ' . $url;
 
 // Use slug sent from browser if available
 $locationSlug = $slug;
@@ -29,7 +28,7 @@ if (!$locationSlug && $url) {
     }
 }
 
-$log[] = 'locationSlug: ' . $locationSlug;
+$log[] = '▶ Yard: ' . $locationSlug;
 
 if (!$locationSlug) {
     ob_end_clean();
@@ -44,7 +43,6 @@ $page     = 1;
 
 while ($page <= 20) {
     $pageUrl = $baseUrl . '/' . ($page > 1 ? '?page=' . $page : '');
-    $log[] = 'Fetching: ' . $pageUrl;
 
     $ch = curl_init($pageUrl);
     curl_setopt_array($ch, [
@@ -64,7 +62,6 @@ while ($page <= 20) {
 
     if ($err)         { $log[] = 'cURL error: ' . $err; break; }
     if ($code != 200) { $log[] = 'HTTP ' . $code . ' stopping'; break; }
-    $log[] = 'HTTP ' . $code . ' bytes:' . strlen($html);
 
     $pageCount = 0;
 
@@ -102,7 +99,6 @@ while ($page <= 20) {
         }
     }
 
-    $log[] = 'Added ' . $pageCount . ' vehicles (total:' . count($vehicles) . ')';
     $hasNext = strpos($html, '?page=' . ($page + 1)) !== false || strpos($html, 'Next Page') !== false;
     if (!$hasNext || $pageCount === 0) break;
     $page++;

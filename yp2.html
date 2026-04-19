@@ -9,41 +9,41 @@
 <title>Yard Picker Pro</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0f0f0f;color:#eee;font-family:-apple-system,sans-serif;padding:16px;max-width:480px;margin:0 auto;padding-bottom:80px}
+body{background:#0a0f0a;color:#eee;font-family:-apple-system,sans-serif;padding:16px;max-width:480px;margin:0 auto;padding-bottom:80px}
 .scroll-btns{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:999}
 .scroll-btns button{background:#1a1a1a;border:1px solid #2a2a2a;color:#888;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5)}
 h1{color:#fff;font-size:22px;font-weight:800;margin-bottom:2px}
-h1 span{color:#00ff88}
-.sub{color:#555;font-size:11px;margin-bottom:20px}
+h1 span{color:#f5c400}
+.sub{color:#4caf50;font-size:11px;margin-bottom:20px;font-weight:600;letter-spacing:1px}
 .section{margin-bottom:20px}
-.label{font-size:10px;color:#00ff88;letter-spacing:2px;font-weight:700;margin-bottom:8px}
-.callout{background:#060f06;border-left:3px solid #00ff88;padding:12px;font-size:12px;color:#668;line-height:1.7;margin-bottom:10px;border-radius:0 4px 4px 0}
-.callout a{color:#00ff88;text-decoration:none}
+.label{font-size:10px;color:#f5c400;letter-spacing:2px;font-weight:700;margin-bottom:8px}
+.callout{background:#060f06;border-left:3px solid #2e7d32;padding:12px;font-size:12px;color:#668;line-height:1.7;margin-bottom:10px;border-radius:0 4px 4px 0}
+.callout a{color:#f5c400;text-decoration:none}
 .callout strong{color:#aaa}
-input[type=text],input[type=url],textarea{display:block;width:100%;background:#0a0a0a;border:none;border-bottom:2px solid #00ff88;color:#eee;padding:12px;font-size:14px;font-family:monospace;outline:none;margin-bottom:10px;-webkit-appearance:none;border-radius:0}
-input[type=number]{display:inline-block;width:80px;background:#0a0a0a;border:none;border-bottom:2px solid #00ff88;color:#eee;padding:10px;font-size:14px;text-align:center;font-family:monospace;outline:none;-webkit-appearance:none;border-radius:0}
+input[type=text],input[type=url],textarea{display:block;width:100%;background:#0a0a0a;border:none;border-bottom:2px solid #2e7d32;color:#eee;padding:12px;font-size:14px;font-family:monospace;outline:none;margin-bottom:10px;-webkit-appearance:none;border-radius:0}
+input[type=number]{display:inline-block;width:80px;background:#0a0a0a;border:none;border-bottom:2px solid #2e7d32;color:#eee;padding:10px;font-size:14px;text-align:center;font-family:monospace;outline:none;-webkit-appearance:none;border-radius:0}
 textarea{height:100px;resize:none;font-size:12px}
 .btn{display:block;width:100%;padding:17px 20px;font-size:14px;font-weight:700;cursor:pointer;border:none;margin-bottom:10px;letter-spacing:.5px;border-radius:6px;transition:all .15s;text-align:center}
-.g{background:#00ff88;color:#000;box-shadow:0 4px 20px rgba(0,255,136,.25)}
-.g:active{transform:scale(.98);box-shadow:0 2px 10px rgba(0,255,136,.15)}
+.g{background:#f5c400;color:#000;box-shadow:0 4px 20px rgba(245,196,0,.3)}
+.g:active{transform:scale(.98);box-shadow:0 2px 10px rgba(245,196,0,.15)}
 .w{background:#1e1e1e;color:#bbb;border:2px solid #2e2e2e}
 .w:active{transform:scale(.98)}
 .btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
 input[type=file]{display:none}
 img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:#111;margin-bottom:10px;border-radius:4px}
-#log{display:none;background:#000;border-left:3px solid #00ff88;padding:12px;font-size:11px;font-family:monospace;line-height:1.8;color:#00ff88;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;margin-bottom:10px;border-radius:0 4px 4px 0}
+#log{display:none;background:#000;border-left:3px solid #2e7d32;padding:12px;font-size:11px;font-family:monospace;line-height:1.8;color:#00ff88;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;margin-bottom:10px;border-radius:0 4px 4px 0}
 .st{display:none;padding:11px 13px;font-size:12px;line-height:1.5;margin-bottom:10px;border-radius:4px}
-.ok{background:#060f06;border:1px solid #1a3a1a;color:#66bb6a}
+.ok{background:#051005;border:1px solid #1a3a1a;color:#81c784}
 .er{background:#0f0606;border:1px solid #3a1a1a;color:#ef5350}
 .ld{background:#060808;border:1px solid #003;color:#00aaff}
 .vitem{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:6px;margin-bottom:6px}
 .vn{font-size:13px;font-weight:600}
 .vm{font-size:11px;color:#555;margin-top:1px}
-.ccard{background:#0a0a0a;border-left:3px solid #00ff88;border-radius:0 6px 6px 0;margin-bottom:10px;overflow:hidden}
+.ccard{background:#0a0f0a;border-left:3px solid #2e7d32;border-radius:0 6px 6px 0;margin-bottom:10px;overflow:hidden}
 .ch{display:flex;justify-content:space-between;align-items:center;padding:13px;cursor:pointer}
-.cn{font-size:15px;font-weight:700;color:#00ff88}
+.cn{font-size:15px;font-weight:700;color:#f5c400}
 .cm{font-size:11px;color:#555;margin-top:2px}
-.cp{font-size:20px;font-weight:800;color:#00ff88}
+.cp{font-size:20px;font-weight:800;color:#f5c400}
 .parts{display:none;padding:0 13px 13px}
 .parts.open{display:block}
 .prow{background:#060606;border-radius:4px;padding:10px;margin-bottom:6px}
@@ -113,12 +113,12 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
     <input type="text" id="search" placeholder="Search: BMW, 2007 Toyota, Silverado..." autocorrect="off" autocapitalize="none" spellcheck="false" style="flex:1;margin-bottom:0" oninput="filterVlist()">
     <button onclick="clearSearch()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#555;padding:12px 14px;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">✕ Clear</button>
   </div>
+  <button class="btn g" id="bAnalyze" style="font-size:16px;padding:20px;letter-spacing:1px;margin-bottom:12px">⚡  FIND MOST PROFITABLE PARTS</button>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-    <span style="font-size:12px;color:#888">Your labor rate:</span>
+    <span style="font-size:12px;color:#888">Labor rate:</span>
     <input type="number" id="rate" value="20">
     <span style="font-size:12px;color:#555">/hr</span>
   </div>
-  <button class="btn g" id="bAnalyze" style="font-size:16px;padding:20px;letter-spacing:1px;position:sticky;top:8px;z-index:100;margin-bottom:12px">⚡  FIND MOST PROFITABLE PARTS</button>
   <div id="vcount" style="font-size:10px;color:#555;letter-spacing:1px;margin-bottom:8px"></div>
   <div id="vlist" style="max-height:40vh;overflow-y:auto;border:1px solid #1a1a1a;border-radius:4px;padding:4px 0"></div>
   <button class="btn w" id="bMore" style="display:none">Load More Vehicles →</button>
@@ -332,7 +332,7 @@ function filterVlist(){
       var idx = parseInt(this.getAttribute('data-idx'));
       filtered[idx]._sel = !filtered[idx]._sel;
       document.getElementById('chk'+idx).textContent = filtered[idx]._sel ? '●' : '○';
-      document.getElementById('chk'+idx).style.color = filtered[idx]._sel ? '#00ff88' : '#333';
+      document.getElementById('chk'+idx).style.color = filtered[idx]._sel ? '#f5c400' : '#333';
       updateAnalyzeBtn();
     };
     el.appendChild(d);
@@ -396,8 +396,6 @@ document.getElementById('bFetch').onclick=function(){
   var slug = '';
   var m = url.match(/\/inventory\/([^/?#]+)/);
   if (m) slug = m[1];
-  L('▶ URL: ' + url);
-  L('▶ Slug extracted: [' + slug + ']');
   
   var btn=this; btn.disabled=true;
   clrLog(); S('ld','Fetching inventory...');
@@ -555,8 +553,7 @@ function runAnalyze(){
           });
           return bestKey ? LAB[bestKey] : null;
         }
-        var avg=Number(p.ebayAvg)||80,lkq=LKQ[p.name]||Number(p.lkqPrice)||lkqLookup(p.name)||50,hrs=labLookup(p.name)||1.0;
-        L('  Part: ['+p.name+'] server price: $'+lkq+' matched: '+(p.lkqMatched||'none'));
+        var avg=Number(p.ebayAvg)||80,lkq=Number(p.lkqPrice)||lkqLookup(p.name)||50,hrs=labLookup(p.name)||1.0;
         var labor=hrs*rate,fees=avg*EFEE,net=avg-lkq-labor-fees-ESHIP;
         return{name:p.name,reason:p.reason||'',ebayAvg:avg,ebayLow:p.ebayLow||Math.round(avg*.65),ebayHigh:p.ebayHigh||Math.round(avg*1.4),lkqCost:lkq,pullHrs:hrs,laborCost:labor,ebayFees:fees,netProfit:net};
       }).sort(function(a,b){return b.netProfit-a.netProfit;});
@@ -589,9 +586,9 @@ function renderResults(rate){
   var good=results.filter(function(c){return c.totalProfit>0;});
   var skip=results.filter(function(c){return c.totalProfit<=0;});
   var tot=results.reduce(function(s,c){return s+c.totalProfit;},0);
-  var h='<div style="background:#0a0a0a;border-left:3px solid #00ff88;padding:14px;margin-bottom:14px;border-radius:0 6px 6px 0">';
+  var h='<div style="background:#0a0a0a;border-left:3px solid #2e7d32;padding:14px;margin-bottom:14px;border-radius:0 6px 6px 0">';
   h+='<div style="font-size:10px;color:#555;letter-spacing:2px;margin-bottom:4px">TOTAL PROFIT POTENTIAL</div>';
-  h+='<div style="font-size:26px;font-weight:800;color:#00ff88">'+fmt(tot)+'</div>';
+  h+='<div style="font-size:26px;font-weight:800;color:#f5c400">'+fmt(tot)+'</div>';
   h+='<div style="font-size:11px;color:#555;margin-top:4px">'+good.length+' profitable · '+results.length+' analyzed</div></div>';
   good.forEach(function(car,rank){
     var id='cr'+rank;
@@ -603,7 +600,7 @@ function renderResults(rate){
     h+='<div style="font-size:10px;color:#333" id="cv'+rank+'">'+(rank===0?'▲':'▼')+'</div></div></div>';
     h+='<div class="parts'+(rank===0?' open':'')+'" id="'+id+'">';
     car.parts.forEach(function(p){
-      var nc=p.netProfit>=50?'#00ff88':p.netProfit>0?'#aacc55':'#666';
+      var nc=p.netProfit>=50?'#f5c400':p.netProfit>0?'#81c784':'#666';
       var eu='https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+p.name)+'&LH_Sold=1&LH_Complete=1';
       h+='<div class="prow">';
       h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right;color:#aaa">'+fmtD(p.ebayAvg)+' eBay</span></div>';
@@ -616,7 +613,11 @@ function renderResults(rate){
       h+='<div><span class="k">eBay fees 13.25%</span><span class="v vm2">–'+fmtD(p.ebayFees)+'</span></div>';
       h+='<div><span class="k">Shipping est.</span><span class="v vm2">–'+fmtD(ESHIP)+'</span></div>';
       h+='<div style="border-top:1px solid #1a1a1a;margin-top:4px;padding-top:6px"><span class="k" style="color:#aaa;font-weight:700">NET PROFIT</span><span class="v vtot" style="color:'+nc+'">'+fmtD(p.netProfit)+'</span></div>';
-      h+='</div><a href="'+eu+'" target="_blank" class="eb">🔍 Verify on eBay sold listings →</a></div>';
+      var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+p.name+' '+car.year+' '+car.make+' '+car.model);
+      h+='</div><div style="display:flex;border-top:1px solid #1a2a1a">';
+      h+='<a href="'+eu+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #1a2a1a;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
+      h+='<a href="'+yt+'" target="_blank" class="eb" style="flex:1;text-align:right;margin:0;padding:8px 10px">🔧 How to remove →</a>';
+      h+='</div></div>';
     });
     h+='</div></div>';
   });
