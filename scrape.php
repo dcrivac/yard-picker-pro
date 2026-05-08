@@ -1,7 +1,13 @@
 <?php
 ob_start();
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+header('Vary: Origin');
+
+$allowedOrigins = ['https://crivac.com', 'https://www.crivac.com'];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+if (in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+}
 
 $url  = isset($_GET['url'])  ? trim($_GET['url'])  : '';
 $slug = isset($_GET['slug']) ? trim($_GET['slug']) : '';
@@ -50,7 +56,8 @@ while ($page <= 20) {
         CURLOPT_FOLLOWLOCATION => true,
         CURLOPT_MAXREDIRS      => 5,
         CURLOPT_TIMEOUT        => 20,
-        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
         CURLOPT_USERAGENT      => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
         CURLOPT_HTTPHEADER     => ['Accept: text/html', 'Accept-Language: en-US,en;q=0.9'],
         CURLOPT_ENCODING       => '',

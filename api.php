@@ -1,24 +1,84 @@
 <?php
-define('ANTHROPIC_KEY', 'YOUR_API_KEY_HERE');
+// Load secrets from gitignored file if present, otherwise rely on server env vars.
+$envFile = __DIR__ . '/.env.php';
+if (is_file($envFile)) { require $envFile; }
+define('ANTHROPIC_KEY', getenv('ANTHROPIC_API_KEY') ?: '');
 
 ini_set('max_execution_time', '180');
 ini_set('max_input_time', '180');
 ini_set('memory_limit', '256M');
 ini_set('post_max_size', '20M');
 
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+// Generic failure response — log details server-side, don't leak to client.
+function fail($status, $logMessage) {
+    error_log('[api.php] ' . $logMessage);
+    http_response_code($status);
+    echo json_encode(['error' => ['message' => 'Request failed']]);
+    exit;
+}
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit; }
-if ($_SERVER['REQUEST_METHOD'] !== 'POST')    { http_response_code(405); echo json_encode(['error'=>['message'=>'Method not allowed']]); exit; }
+// CORS allowlist — only crivac.com origins may call this endpoint.
+$allowedOrigins = ['https://crivac.com', 'https://www.crivac.com'];
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+header('Content-Type: application/json');
+header('Vary: Origin');
+if (in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Methods: POST, OPTIONS');
+    header('Access-Control-Allow-Headers: Content-Type');
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST')    { fail(405, 'Method not allowed: ' . $_SERVER['REQUEST_METHOD']); }
+
+if (ANTHROPIC_KEY === '') { fail(500, 'ANTHROPIC_API_KEY env var not set'); }
+
+// Rate limit: 10 requests/minute per IP via tmpfile counter.
+$ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+$bucket = sys_get_temp_dir() . '/yp-rl-' . hash('sha256', $ip);
+$now = time();
+$window = 60;
+$limit = 10;
+$entries = [];
+if (is_file($bucket)) {
+    $raw = @file_get_contents($bucket);
+    if ($raw) {
+        foreach (explode("\n", trim($raw)) as $ts) {
+            if ($ts !== '' && (int)$ts > $now - $window) $entries[] = (int)$ts;
+        }
+    }
+}
+if (count($entries) >= $limit) {
+    header('Retry-After: ' . $window);
+    fail(429, 'Rate limit exceeded for ' . $ip);
+}
+$entries[] = $now;
+@file_put_contents($bucket, implode("\n", $entries), LOCK_EX);
+
+// Bound request body size (Content-Length is advisory; we re-check after read).
+$declared = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
+if ($declared > 20000) { fail(413, 'Body too large (declared ' . $declared . ')'); }
 
 $body = file_get_contents('php://input');
-if (!$body) { http_response_code(400); echo json_encode(['error'=>['message'=>'Empty body']]); exit; }
+if (!$body) { fail(400, 'Empty body'); }
+if (strlen($body) > 20000) { fail(413, 'Body too large (' . strlen($body) . ' bytes)'); }
 
 $decoded = json_decode($body, true);
-if (!$decoded) { http_response_code(400); echo json_encode(['error'=>['message'=>'Invalid JSON']]); exit; }
+if (!$decoded) { fail(400, 'Invalid JSON'); }
+
+// Validate request shape and model allowlist before paying upstream.
+if (!isset($decoded['model']) || !is_string($decoded['model'])) { fail(400, 'Missing model'); }
+$modelOk = false;
+foreach (['claude-haiku-', 'claude-sonnet-'] as $prefix) {
+    if (strncmp($decoded['model'], $prefix, strlen($prefix)) === 0) { $modelOk = true; break; }
+}
+if (!$modelOk) { fail(400, 'Disallowed model: ' . $decoded['model']); }
+if (!isset($decoded['messages']) || !is_array($decoded['messages']) || count($decoded['messages']) === 0) {
+    fail(400, 'Missing or empty messages');
+}
+if (isset($decoded['max_tokens']) && (!is_int($decoded['max_tokens']) || $decoded['max_tokens'] > 4096 || $decoded['max_tokens'] < 1)) {
+    fail(400, 'max_tokens out of range: ' . var_export($decoded['max_tokens'], true));
+}
 
 // ── PYP CHULA VISTA PRICE LIST (Total Price) ─────────────────────────────
 $LKQ = [
@@ -113,8 +173,12 @@ $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $curlError = curl_error($ch);
 curl_close($ch);
 
-if ($curlError) { http_response_code(500); echo json_encode(['error'=>['message'=>'cURL: '.$curlError]]); exit; }
-if (!$response) { http_response_code(500); echo json_encode(['error'=>['message'=>'Empty response from Anthropic']]); exit; }
+if ($curlError) { fail(502, 'cURL error: ' . $curlError); }
+if (!$response)  { fail(502, 'Empty response from Anthropic (HTTP ' . $httpCode . ')'); }
+if ($httpCode < 200 || $httpCode >= 300) {
+    // Don't proxy upstream error messages — they reveal billing/quota state.
+    fail(502, 'Anthropic HTTP ' . $httpCode . ': ' . substr($response, 0, 500));
+}
 
 // ── INJECT CORRECT LKQ PRICES INTO RESPONSE ───────────────────────────────
 $resp = json_decode($response, true);
