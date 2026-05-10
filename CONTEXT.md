@@ -61,6 +61,8 @@ Browser → api.php (proxies to Anthropic API, injects LKQ prices) → analysis 
 ### scrape.php
 
 - Uses PHP curl with iPhone user-agent to fetch pyp.com (blocks direct browser fetches)
+- **CORS allowlist**: same `crivac.com` allowlist as `api.php`
+- **SSL verification on** (`CURLOPT_SSL_VERIFYPEER => true`, `VERIFYHOST => 2`) — MITM-safe
 - Extracts vehicle names from image alt text: `alt="2009 CHEVROLET SILVERADO 1500 available for parts"`
 - Slug extracted via `strpos`/`strcspn` — NOT regex (PHP regex delimiter `#` conflicts with `#` in character classes)
 - Browser extracts slug client-side via JS and sends as `&slug=` parameter to avoid server-side parsing issues
@@ -70,6 +72,11 @@ Browser → api.php (proxies to Anthropic API, injects LKQ prices) → analysis 
 ### api.php
 
 - Proxies requests to Anthropic API (keeps API key server-side)
+- **Reads `ANTHROPIC_API_KEY` from env** (or `./.env.php` if present) — never hardcoded in source
+- **CORS allowlist**: only `https://crivac.com` / `https://www.crivac.com` may call the endpoint
+- **Rate limit**: 10 POSTs/minute per IP (file-based counter in the system temp dir)
+- **Input validation**: rejects bodies > 20KB, requires `messages`, allowlists `claude-haiku-*` / `claude-sonnet-*` models, caps `max_tokens` at 4096
+- **Generic errors**: all failures return `{"error":{"message":"Request failed"}}`; details go to the PHP error log via `error_log()`
 - **Injects LKQ prices server-side** — reads AI response JSON, matches part names to PYP price list, adds `lkqPrice` and `lkqMatched` fields before returning to browser
 - Uses fuzzy matching (partial string + word overlap) to handle AI part name variations
 
@@ -125,7 +132,6 @@ Net Profit = eBay avg sold price (AI estimate)
 
 ### 🟡 Important
 
-- **API key placeholder** — `api.php` line 2 has `YOUR_API_KEY_HERE` — must be replaced with real `sk-ant-` key on server
 - **Row numbers missing** — Vehicle row/aisle numbers not extracted from PYP pages (shows blank for most vehicles)
 - **Drivetrain prices estimated** — Transmission (Manual) uses same price as Auto ($266.33) — PYP lists one “Transmission” price for both
 
@@ -163,9 +169,17 @@ When deploying updates:
 1. `scp -P 18765 yp2.html u2074-ems391e7qg8i@gcam1116.siteground.biz:public_html/yp2.html`
 1. `scp -P 18765 api.php u2074-ems391e7qg8i@gcam1116.siteground.biz:public_html/api.php`
 1. `scp -P 18765 scrape.php u2074-ems391e7qg8i@gcam1116.siteground.biz:public_html/scrape.php`
-1. Verify `api.php` has real API key (not placeholder)
+1. Verify the server has `ANTHROPIC_API_KEY` set — either as a SiteGround PHP env var, or via a `public_html/.env.php` file (chmod 600, not in git) that calls `putenv('ANTHROPIC_API_KEY=sk-ant-...')`. `.env.php` survives `git pull` because it's gitignored.
 1. Test in private/incognito Safari window to bypass cache
 1. Check green log box for expected output
+
+### Required server env vars
+
+- `ANTHROPIC_API_KEY` — your `sk-ant-...` key. `api.php` returns 500 if missing.
+
+### CORS allowlist
+
+`api.php` and `scrape.php` only honor requests from `https://crivac.com` and `https://www.crivac.com`. If you add another domain, edit the `$allowedOrigins` array in both files.
 
 -----
 
