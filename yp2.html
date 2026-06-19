@@ -9,55 +9,71 @@
 <title>Yard Picker Pro</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0a0f0a;color:#eee;font-family:-apple-system,sans-serif;padding:16px;max-width:480px;margin:0 auto;padding-bottom:80px}
+body{background:#111111;color:#f0f0f0;font-family:-apple-system,sans-serif;padding:16px;max-width:480px;margin:0 auto;padding-bottom:80px}
 .scroll-btns{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:999}
-.scroll-btns button{background:#1a1a1a;border:1px solid #2a2a2a;color:#888;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+.scroll-btns button{background:#f0f0f0;border:1px solid #2a2a2a;color:#888;width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.5)}
 h1{color:#fff;font-size:22px;font-weight:800;margin-bottom:2px}
-h1 span{color:#f5c400}
-.sub{color:#4caf50;font-size:11px;margin-bottom:20px;font-weight:600;letter-spacing:1px}
+h1 span{color:#ff6b00}
+.sub{color:#ff6b00;font-size:11px;margin-bottom:20px;font-weight:600;letter-spacing:1px;display:none}
 .section{margin-bottom:20px}
-.label{font-size:10px;color:#f5c400;letter-spacing:2px;font-weight:700;margin-bottom:8px}
-.callout{background:#060f06;border-left:3px solid #2e7d32;padding:12px;font-size:12px;color:#668;line-height:1.7;margin-bottom:10px;border-radius:0 4px 4px 0}
-.callout a{color:#f5c400;text-decoration:none}
+.label{font-size:10px;color:#ff6b00;letter-spacing:2px;font-weight:700;margin-bottom:8px}
+.callout{background:#1a1000;border-left:3px solid #ff6b00;padding:12px;font-size:12px;color:#888;line-height:1.7;margin-bottom:10px;border-radius:0 4px 4px 0}
+.callout a{color:#ff6b00;text-decoration:none}
 .callout strong{color:#aaa}
-input[type=text],input[type=url],textarea{display:block;width:100%;background:#0a0a0a;border:none;border-bottom:2px solid #2e7d32;color:#eee;padding:12px;font-size:14px;font-family:monospace;outline:none;margin-bottom:10px;-webkit-appearance:none;border-radius:0}
-input[type=number]{display:inline-block;width:80px;background:#0a0a0a;border:none;border-bottom:2px solid #2e7d32;color:#eee;padding:10px;font-size:14px;text-align:center;font-family:monospace;outline:none;-webkit-appearance:none;border-radius:0}
+input[type=text],input[type=url],textarea{display:block;width:100%;background:#f8f8f8;border:none;border-bottom:2px solid #ff6b00;color:#0f0f0f;padding:12px;font-size:14px;font-family:monospace;outline:none;margin-bottom:10px;-webkit-appearance:none;border-radius:0}
+input[type=number]{display:inline-block;width:80px;background:#f8f8f8;border:none;border-bottom:2px solid #ff6b00;color:#0f0f0f;padding:10px;font-size:14px;text-align:center;font-family:monospace;outline:none;-webkit-appearance:none;border-radius:0}
 textarea{height:100px;resize:none;font-size:12px}
 .btn{display:block;width:100%;padding:17px 20px;font-size:14px;font-weight:700;cursor:pointer;border:none;margin-bottom:10px;letter-spacing:.5px;border-radius:6px;transition:all .15s;text-align:center}
-.g{background:#f5c400;color:#000;box-shadow:0 4px 20px rgba(245,196,0,.3)}
-.g:active{transform:scale(.98);box-shadow:0 2px 10px rgba(245,196,0,.15)}
-.w{background:#1e1e1e;color:#bbb;border:2px solid #2e2e2e}
+.g{background:#ff6b00;color:#ffffff;box-shadow:0 4px 20px rgba(255,107,0,.3)}
+.g:active{transform:scale(.98);box-shadow:0 2px 10px rgba(255,107,0,.15)}
+.w{background:#222222;color:#aaa;border:2px solid #333333}
 .w:active{transform:scale(.98)}
 .btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
 input[type=file]{display:none}
 img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:#111;margin-bottom:10px;border-radius:4px}
-#log{display:none;background:#000;border-left:3px solid #2e7d32;padding:12px;font-size:11px;font-family:monospace;line-height:1.8;color:#00ff88;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;margin-bottom:10px;border-radius:0 4px 4px 0}
+#log{display:none;background:#1a1a1a;border-left:3px solid #ff6b00;padding:12px;font-size:11px;font-family:monospace;line-height:1.8;color:#aaa;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto;margin-bottom:10px;border-radius:0 4px 4px 0}
 .st{display:none;padding:11px 13px;font-size:12px;line-height:1.5;margin-bottom:10px;border-radius:4px}
-.ok{background:#051005;border:1px solid #1a3a1a;color:#81c784}
-.er{background:#0f0606;border:1px solid #3a1a1a;color:#ef5350}
-.ld{background:#060808;border:1px solid #003;color:#00aaff}
-.vitem{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:6px;margin-bottom:6px}
-.vn{font-size:13px;font-weight:600}
-.vm{font-size:11px;color:#555;margin-top:1px}
-.ccard{background:#0a0f0a;border-left:3px solid #2e7d32;border-radius:0 6px 6px 0;margin-bottom:10px;overflow:hidden}
+.ok{background:#1a1000;border:1px solid #ff6b00;color:#ff6b00}
+.er{background:#1a0000;border:1px solid #cc0000;color:#ff4444}
+.ld{background:#001020;border:1px solid #0066cc;color:#4499ff}
+.vitem{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#ffffff;border:1px solid #f0f0f0;border-radius:6px;margin-bottom:6px}
+.vn{font-size:13px;font-weight:600;color:#0f0f0f}
+.vm{font-size:11px;color:#888;margin-top:1px}
+.ccard{background:#1a1a1a;border-left:3px solid #ff6b00;border-radius:0 6px 6px 0;margin-bottom:10px;overflow:hidden}
 .ch{display:flex;justify-content:space-between;align-items:center;padding:13px;cursor:pointer}
-.cn{font-size:15px;font-weight:700;color:#f5c400}
+.cn{font-size:15px;font-weight:700;color:#ff6b00}
 .cm{font-size:11px;color:#555;margin-top:2px}
-.cp{font-size:20px;font-weight:800;color:#f5c400}
+.cp{font-size:20px;font-weight:800;color:#ff6b00}
 .parts{display:none;padding:0 13px 13px}
 .parts.open{display:block}
-.prow{background:#060606;border-radius:4px;padding:10px;margin-bottom:6px}
+.prow{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:4px;padding:10px;margin-bottom:6px}
 .pn{font-size:13px;font-weight:700;margin-bottom:4px}
 .pr{font-size:10px;color:#444;margin-bottom:8px;font-style:italic}
 .pb{font-size:11px;line-height:2}
 .pb div{display:flex;justify-content:space-between}
-.pb .k{color:#555}
+.pb .k{color:#777}
 .pb .v{font-weight:600}
-.pb .vp{color:#aaa}.pb .vm2{color:#c07070}.pb .vtot{font-size:13px;font-weight:800}
+.pb .vp{color:#ccc}.pb .vm2{color:#cc3300}.pb .vtot{font-size:13px;font-weight:800}
 .eb{display:block;font-size:11px;color:#00aaff;text-decoration:none;margin-top:8px}
 .div{display:flex;align-items:center;gap:10px;margin:14px 0}
-.div div{flex:1;height:1px;background:#1a1a1a}
-.div span{font-size:10px;color:#333;font-weight:700}
+.trk-dash{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.trk-stat{background:#1a1a1a;border:1px solid #333;border-radius:6px;padding:12px;text-align:center}
+.trk-val{font-size:22px;font-weight:800;color:#ff6b00}
+.trk-lbl{font-size:9px;color:#999;letter-spacing:2px;margin-top:3px}
+.trk-item{background:#1a1a1a;border:1px solid #333;border-radius:6px;margin-bottom:8px;overflow:hidden}
+.trk-head{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.trk-name{flex:1;font-size:12px;font-weight:700;color:#f0f0f0}
+.trk-car{font-size:10px;color:#555;margin-top:2px}
+.trk-cost{font-size:11px;color:#cc3300;font-weight:600}
+.trk-actions{display:flex;border-top:1px solid #333}
+.trk-btn{flex:1;padding:9px;font-size:11px;font-weight:700;background:none;border:none;cursor:pointer;letter-spacing:.5px}
+.trk-btn.list{color:#ff6b00}.trk-btn.sold{color:#ff6b00}.trk-btn.del{color:#555}
+.tab-bar{display:flex;border-bottom:1px solid #333;margin-bottom:14px}
+.tab{flex:1;padding:10px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:#666;cursor:pointer;border-bottom:2px solid transparent}
+.tab.on{color:#ff6b00;border-bottom-color:#ff6b00}
+.div div{flex:1;height:1px;background:#e0e0e0}
+.div span{font-size:10px;color:#bbb;font-weight:700}
+
 </style>
 </head>
 <body>
@@ -77,15 +93,10 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
   <input type="url" id="pypUrl" placeholder="https://www.pyp.com/inventory/your-yard-1234/" autocorrect="off" autocapitalize="none" spellcheck="false">
   <button class="btn g" id="bFetch" style="font-size:16px;padding:20px;letter-spacing:1px">⬇  GET YARD INVENTORY</button>
 
-  <div class="div"><div></div><span>OR — PASTE TEXT</span><div></div></div>
-  <div class="callout" style="border-left-color:#555;background:#080808;color:#444">
-    On the inventory page: tap and hold → Select All → Copy → paste here.
-  </div>
-  <textarea id="pasteText" placeholder="Paste inventory text here..."></textarea>
-  <button class="btn g" id="bText">▶  Read Vehicles from Text</button>
+
 
   <div style="margin-top:6px">
-    <button class="btn w" id="bShowScreenshot" onclick="toggleScreenshot()" style="font-size:11px;padding:10px;color:#444;border-color:#1a1a1a">▼  Screenshot option (not recommended)</button>
+    <button class="btn w" id="bShowScreenshot" onclick="toggleScreenshot()" style="font-size:11px;padding:10px;color:#999;border-color:#e0e0e0;background:#f8f8f8">▼  Screenshot option (not recommended)</button>
     <div id="screenshotSection" style="display:none;margin-top:8px">
       <div class="callout" style="border-left-color:#555;background:#080808;color:#444;font-size:11px">
         ⚠ Screenshots are less reliable — text must be large and readable. Use URL method when possible.
@@ -111,7 +122,7 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
   <div class="label">STEP 2 OF 3 — REVIEW VEHICLES &amp; ANALYZE</div>
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
     <input type="text" id="search" placeholder="Search: BMW, 2007 Toyota, Silverado..." autocorrect="off" autocapitalize="none" spellcheck="false" style="flex:1;margin-bottom:0" oninput="filterVlist()">
-    <button onclick="clearSearch()" style="background:#1a1a1a;border:1px solid #2a2a2a;color:#555;padding:12px 14px;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">✕ Clear</button>
+    <button onclick="clearSearch()" style="background:#f0f0f0;border:1px solid #2a2a2a;color:#555;padding:12px 14px;border-radius:4px;font-size:12px;cursor:pointer;white-space:nowrap">✕ Clear</button>
   </div>
   <button class="btn g" id="bAnalyze" style="font-size:16px;padding:20px;letter-spacing:1px;margin-bottom:12px">⚡  FIND MOST PROFITABLE PARTS</button>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -120,7 +131,7 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
     <span style="font-size:12px;color:#555">/hr</span>
   </div>
   <div id="vcount" style="font-size:10px;color:#555;letter-spacing:1px;margin-bottom:8px"></div>
-  <div id="vlist" style="max-height:40vh;overflow-y:auto;border:1px solid #1a1a1a;border-radius:4px;padding:4px 0"></div>
+  <div id="vlist" style="max-height:40vh;overflow-y:auto;border:1px solid #f0f0f0;border-radius:4px;padding:4px 0"></div>
   <button class="btn w" id="bMore" style="display:none">Load More Vehicles →</button>
 </div>
 
@@ -143,7 +154,6 @@ function toggleScreenshot(){
 
 // ── DATA ──────────────────────────────────────────────────────
 var LKQ={
-// PYP Chula Vista — TOTAL PRICE (base + core deposit + 90-day guarantee)
 "A/C Compressor":84.09,
 "A/C Compressor Clutch":40.29,
 "A/C Condenser":62.49,
@@ -327,12 +337,12 @@ function filterVlist(){
     d.className = 'vitem';
     d.style.cursor = 'pointer';
     d.setAttribute('data-idx', i);
-    d.innerHTML = '<div style="font-size:18px">🚗</div><div style="flex:1"><div class="vn">'+v.year+' '+v.make+' '+v.model+'</div>'+(v.row?'<div class="vm">Row '+v.row+'</div>':'')+'</div><div id="chk'+i+'" style="font-size:16px;color:#333">○</div>';
+    d.innerHTML = '<div style="font-size:18px">🚗</div><div style="flex:1"><div class="vn">'+v.year+' '+v.make+' '+v.model+'</div><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><span style="font-size:10px;color:#999">Row:</span><input type="text" value="'+(v.row||'')+'" placeholder="—" onclick="event.stopPropagation()" oninput="filtered['+i+'].row=this.value" style="width:50px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:3px;background:#f8f8f8;color:#333"></div></div><div id="chk'+i+'" style="font-size:16px;color:#333">○</div>';
     d.onclick = function(){
       var idx = parseInt(this.getAttribute('data-idx'));
       filtered[idx]._sel = !filtered[idx]._sel;
       document.getElementById('chk'+idx).textContent = filtered[idx]._sel ? '●' : '○';
-      document.getElementById('chk'+idx).style.color = filtered[idx]._sel ? '#f5c400' : '#333';
+      document.getElementById('chk'+idx).style.color = filtered[idx]._sel ? '#ff6b00' : '#ccc';
       updateAnalyzeBtn();
     };
     el.appendChild(d);
@@ -354,9 +364,9 @@ function updateAnalyzeBtn(){
   var btn = document.getElementById('bAnalyze');
   var bmore = document.getElementById('bMore');
   if(sel.length > 0){
-    btn.textContent = '▶  Analyze ' + sel.length + ' Selected Vehicle' + (sel.length>1?'s':'');
+    btn.textContent = '⚡  ANALYZE ' + sel.length + ' SELECTED';
   } else {
-    btn.textContent = '▶  Analyze Top 5 from List';
+    btn.textContent = '⚡  ANALYZE VEHICLES';
   }
   var rem = filtered.length - offset;
   if(bmore.style.display !== 'none'){
@@ -409,7 +419,7 @@ document.getElementById('bFetch').onclick=function(){
   x.onload=function(){
     btn.disabled=false;
     var d;try{d=JSON.parse(x.responseText);}catch(e){L('❌ Bad response');S('er','Bad response from server.');return;}
-    if(d.log)d.log.forEach(function(l){L('  '+l);});
+    if(d.log)d.log.forEach(function(l){if(l.indexOf('✅')>-1||l.indexOf('❌')>-1||l.indexOf('▶')>-1||l.indexOf('DONE')>-1)L('  '+l);});
     if(d.error){L('❌ '+d.error);S('er',d.error);return;}
     if(!d.vehicles||!d.vehicles.length){S('er','No vehicles found. Check the log.');return;}
     L('✅ '+d.vehicles.length+' vehicles from '+(d.pages||1)+' page(s)');
@@ -419,22 +429,7 @@ document.getElementById('bFetch').onclick=function(){
 };
 
 // ── PASTE TEXT ────────────────────────────────────────────────
-document.getElementById('bText').onclick=function(){
-  var text=document.getElementById('pasteText').value.trim();
-  if(!text){S('er','Paste the inventory text first.');return;}
-  var btn=this; btn.disabled=true;
-  clrLog(); S('ld','Reading vehicles from text...');
-  L('▶ Sending text to AI...');
-  api({model:'claude-haiku-4-5-20251001',max_tokens:2000,messages:[{role:'user',content:'This is text copied from a PYP Pick Your Part vehicle inventory page. Extract every vehicle. Return ONLY a JSON array:\n[{"year":"2009","make":"CHEVROLET","model":"SILVERADO 1500","row":"L9"}]\nIgnore all nav, footer, and non-vehicle text.\n\n'+text.slice(0,8000)}]},
-  function(err,txt){
-    btn.disabled=false;
-    if(err){L('❌ '+err);S('er',err);return;}
-    var v=parseJSON(txt);
-    if(!v||!v.length){L('❌ No vehicles found');S('er','No vehicles found in pasted text.');return;}
-    L('✅ '+v.length+' vehicles found');
-    gotVehicles(v);
-  });
-};
+
 
 // ── PHOTO ─────────────────────────────────────────────────────
 document.getElementById('bPhoto').onclick=function(){L('📁 Opening photos...');document.getElementById('fi').click();};
@@ -586,9 +581,9 @@ function renderResults(rate){
   var good=results.filter(function(c){return c.totalProfit>0;});
   var skip=results.filter(function(c){return c.totalProfit<=0;});
   var tot=results.reduce(function(s,c){return s+c.totalProfit;},0);
-  var h='<div style="background:#0a0a0a;border-left:3px solid #2e7d32;padding:14px;margin-bottom:14px;border-radius:0 6px 6px 0">';
+  var h='<div style="background:#ffffff;border-left:3px solid #ff6b00;padding:14px;margin-bottom:14px;border-radius:0 6px 6px 0">';
   h+='<div style="font-size:10px;color:#555;letter-spacing:2px;margin-bottom:4px">TOTAL PROFIT POTENTIAL</div>';
-  h+='<div style="font-size:26px;font-weight:800;color:#f5c400">'+fmt(tot)+'</div>';
+  h+='<div style="font-size:26px;font-weight:800;color:#ff6b00">'+fmt(tot)+'</div>';
   h+='<div style="font-size:11px;color:#555;margin-top:4px">'+good.length+' profitable · '+results.length+' analyzed</div></div>';
   good.forEach(function(car,rank){
     var id='cr'+rank;
@@ -600,7 +595,7 @@ function renderResults(rate){
     h+='<div style="font-size:10px;color:#333" id="cv'+rank+'">'+(rank===0?'▲':'▼')+'</div></div></div>';
     h+='<div class="parts'+(rank===0?' open':'')+'" id="'+id+'">';
     car.parts.forEach(function(p){
-      var nc=p.netProfit>=50?'#f5c400':p.netProfit>0?'#81c784':'#666';
+      var nc=p.netProfit>=50?'#ff6b00':p.netProfit>0?'#2e7d32':'#555';
       var eu='https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+p.name)+'&LH_Sold=1&LH_Complete=1';
       h+='<div class="prow">';
       h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right;color:#aaa">'+fmtD(p.ebayAvg)+' eBay</span></div>';
@@ -612,11 +607,16 @@ function renderResults(rate){
       h+='<div><span class="k">Labor '+p.pullHrs.toFixed(1)+'h × $'+rate+'</span><span class="v vm2">–'+fmtD(p.laborCost)+'</span></div>';
       h+='<div><span class="k">eBay fees 13.25%</span><span class="v vm2">–'+fmtD(p.ebayFees)+'</span></div>';
       h+='<div><span class="k">Shipping est.</span><span class="v vm2">–'+fmtD(ESHIP)+'</span></div>';
-      h+='<div style="border-top:1px solid #1a1a1a;margin-top:4px;padding-top:6px"><span class="k" style="color:#aaa;font-weight:700">NET PROFIT</span><span class="v vtot" style="color:'+nc+'">'+fmtD(p.netProfit)+'</span></div>';
+      h+='<div style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:6px"><span class="k" style="color:#aaa;font-weight:700">NET PROFIT</span><span class="v vtot" style="color:'+nc+'">'+fmtD(p.netProfit)+'</span></div>';
       var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+p.name+' '+car.year+' '+car.make+' '+car.model);
-      h+='</div><div style="display:flex;border-top:1px solid #1a2a1a">';
-      h+='<a href="'+eu+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #1a2a1a;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
-      h+='<a href="'+yt+'" target="_blank" class="eb" style="flex:1;text-align:right;margin:0;padding:8px 10px">🔧 How to remove →</a>';
+      h+='</div><div style="display:flex;border-top:2px solid #f0f0f0">';
+      h+='<a href="'+eu+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
+      h+='<a href="'+yt+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #f0f0f0;text-align:center;margin:0;padding:8px 10px">🔧 Remove →</a>';
+      var tid='t'+Date.now()+Math.random().toString(36).slice(2,5);
+      window._tdata=window._tdata||{};
+      window._tdata[tid]={id:tid,part:p.name,car:car.year+' '+car.make+' '+car.model,lkqCost:p.lkqCost,laborCost:p.laborCost,ebayAvg:p.ebayAvg,reason:p.reason||''};
+      h+='<button onclick="addToTracker(window._tdata[\''+tid+'\'])" class="eb" style="flex:1;text-align:center;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px;background:none;border:none;cursor:pointer;color:#ff6b00;font-size:11px;font-weight:700">+ Track</button>';
+      h+='<button onclick="draftEbay(window._tdata[\''+tid+'\'])" class="eb" style="flex:1;text-align:right;margin:0;padding:8px 10px;background:none;border:none;cursor:pointer;color:#0066cc;font-size:11px;font-weight:700">📝 Draft</button>';
       h+='</div></div>';
     });
     h+='</div></div>';
@@ -625,7 +625,7 @@ function renderResults(rate){
     h+='<div style="font-size:10px;color:#333;letter-spacing:2px;margin:14px 0 8px">NOT WORTH PULLING</div>';
     skip.forEach(function(c){h+='<div style="font-size:12px;color:#2a2a2a;padding:3px 0">'+c.year+' '+c.make+' '+c.model+'</div>';});
   }
-  h+='<div style="font-size:10px;color:#1a1a1a;margin-top:14px;line-height:1.8">eBay prices AI-estimated. PYP cost = Total Price (base + core deposit + 90-day guarantee). eBay fees 13.25%. Shipping $25/part. Always verify before pulling.</div>';
+  h+='<div style="font-size:10px;color:#f0f0f0;margin-top:14px;line-height:1.8">eBay prices AI-estimated. PYP cost = Total Price (base + core deposit + 90-day guarantee). eBay fees 13.25%. Shipping $25/part. Always verify before pulling.</div>';
   el.innerHTML=h;
 }
 
@@ -636,6 +636,146 @@ function tc(id,rank){
   el.classList.toggle('open',!open);
   if(cv)cv.textContent=open?'▼':'▲';
 }
+
+// PROFIT TRACKER
+var TKEY='yp_tracker_v1';
+function loadT(){try{return JSON.parse(localStorage.getItem(TKEY))||[];}catch(e){return[];}}
+function saveT(d){try{localStorage.setItem(TKEY,JSON.stringify(d));}catch(e){}}
+
+function addToTracker(item){
+  var d=loadT();
+  if(d.find(function(x){return x.id===item.id;})){alert(item.part+' already tracked');return;}
+  item.status='pulled';item.pulledAt=Date.now();
+  d.push(item);saveT(d);renderT();
+  document.getElementById('step4').scrollIntoView({behavior:'smooth'});
+}
+
+function updateStatus(id,status){
+  var d=loadT();
+  var item=d.find(function(x){return x.id===id;});
+  if(!item)return;
+  if(status==='delete'){if(!confirm('Remove '+item.part+'?'))return;d=d.filter(function(x){return x.id!==id;});saveT(d);renderT();return;}
+  if(status==='listed'){var p=prompt('eBay listing price for '+item.part+'?',item.ebayAvg||'');if(!p)return;item.listPrice=parseFloat(p);item.listedAt=Date.now();}
+  if(status==='sold'){var s=prompt('Final sale price for '+item.part+'?',item.listPrice||'');if(!s)return;item.salePrice=parseFloat(s);item.soldAt=Date.now();}
+  item.status=status;saveT(d);renderT();
+}
+
+function clearTracker(){if(!confirm('Clear all tracker data?'))return;localStorage.removeItem(TKEY);renderT();}
+
+var curTab='pulled';
+function showTab(t){
+  curTab=t;
+  ['pulled','listed','sold'].forEach(function(x){
+    document.getElementById('tab-'+x).className='tab'+(x===t?' on':'');
+  });
+  renderT();
+}
+
+function renderT(){
+  var d=loadT();
+  // Show tracker section only when there is data
+  var s4=document.getElementById('step4');
+  if(s4) s4.style.display = d.length > 0 ? 'block' : 'none';
+  var invested=d.reduce(function(s,x){return s+(x.lkqCost||0);},0);
+  var soldItems=d.filter(function(x){return x.salePrice;});
+  var revenue=soldItems.reduce(function(s,x){return s+x.salePrice;},0);
+  var profit=soldItems.reduce(function(s,x){return s+x.salePrice-(x.lkqCost||0)-(x.laborCost||0)-x.salePrice*0.1325-25;},0);
+  var pipeline=d.filter(function(x){return x.listPrice&&!x.salePrice;}).reduce(function(s,x){return s+x.listPrice;},0);
+  document.getElementById('tk-invested').textContent=fmt(invested);
+  document.getElementById('tk-revenue').textContent=fmt(revenue);
+  document.getElementById('tk-profit').textContent=fmt(profit);
+  document.getElementById('tk-pipeline').textContent=fmt(pipeline);
+  var filtered=d.filter(function(x){return x.status===curTab;});
+  var el=document.getElementById('trk-list');
+  if(!filtered.length){el.innerHTML='<div style="font-size:12px;color:#333;padding:20px;text-align:center">No '+curTab+' parts yet</div>';return;}
+  var h='';
+  filtered.forEach(function(item){
+    h+='<div class="trk-item"><div class="trk-head">';
+    h+='<div style="font-size:20px">'+(item.status==='sold'?'\u2705':item.status==='listed'?'\U0001f4e6':'\U0001f527')+'</div>';
+    h+='<div style="flex:1"><div class="trk-name">'+item.part+'</div>';
+    h+='<div class="trk-car">'+item.car+'</div>';
+    if(item.listPrice)h+='<div style="font-size:11px;color:#ff6b00;margin-top:2px">Listed: '+fmt(item.listPrice)+'</div>';
+    if(item.salePrice){var net=item.salePrice-(item.lkqCost||0)-item.salePrice*0.1325-25;h+='<div style="font-size:11px;color:#ff6b00;margin-top:2px">Sold: '+fmt(item.salePrice)+' Net: '+fmtD(net)+'</div>';}
+    h+='</div><div class="trk-cost">-'+fmt(item.lkqCost||0)+'</div></div>';
+    h+='<div class="trk-actions">';
+    if(item.status==='pulled')h+='<button class="trk-btn list" onclick="updateStatus(\''+item.id+'\',\'listed\')">Mark Listed</button>';
+    if(item.status==='listed')h+='<button class="trk-btn sold" onclick="updateStatus(\''+item.id+'\',\'sold\')">Mark Sold</button>';
+    h+='<button class="trk-btn del" onclick="updateStatus(\''+item.id+'\',\'delete\')">Remove</button>';
+    h+='</div></div>';
+  });
+  el.innerHTML=h;
+}
+window.addEventListener('DOMContentLoaded', renderT);
+
+// EBAY DRAFT GENERATOR
+function copyDraft(id){var el=document.getElementById(id);navigator.clipboard.writeText(el.value).then(function(){el.style.borderColor="#ff6b00";setTimeout(function(){el.style.borderColor="#ddd";},1000);});}
+function closeModal(btn){var m=btn;while(m&&m.style&&m.style.position!=='fixed')m=m.parentNode;if(m)m.remove();}
+function draftEbay(item) {
+  if (!item) return;
+  var year = item.car.split(' ')[0];
+  var makemodel = item.car.split(' ').slice(1).join(' ');
+  var price = item.ebayAvg || 80;
+  var suggestedPrice = Math.round(price * 0.95); // slightly under avg
+
+  var title = year + ' ' + makemodel + ' ' + item.part + ' OEM';
+  if (title.length > 80) title = title.slice(0, 77) + '...';
+
+  var desc = [
+    'FOR SALE: ' + year + ' ' + makemodel + ' ' + item.part,
+    '',
+    'Pulled from a ' + year + ' ' + makemodel + ' at a Pick Your Part salvage yard.',
+    'Part is OEM (Original Equipment Manufacturer) — not aftermarket.',
+    '',
+    '✅ CONDITION',
+    'Used, pulled condition. Inspected before listing.',
+    'Please see photos for exact condition.',
+    '',
+    '✅ COMPATIBILITY',
+    'Fits: ' + year + ' ' + makemodel,
+    'Always verify fitment with your VIN before purchasing.',
+    '',
+    '✅ SHIPPING',
+    'Ships within 1-2 business days of payment.',
+    'Carefully packaged to prevent damage in transit.',
+    'Combined shipping available on multiple purchases.',
+    '',
+    '✅ RETURNS',
+    '30-day returns accepted. Buyer pays return shipping.',
+    '',
+    'Any questions? Send a message before purchasing.',
+    'Thanks for looking!'
+  ].join('\n');
+
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;overflow-y:auto;padding:20px';
+  modal.innerHTML = [
+    '<div style="background:#fff;border-radius:8px;padding:20px;max-width:500px;margin:0 auto">',
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">',
+    '<div style="font-size:14px;font-weight:700;color:#0f0f0f">📝 eBay Draft — ' + item.part + '</div>',
+    '<button onclick="closeModal(this)" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999">✕</button>',
+    '</div>',
+    '<div style="font-size:10px;color:#ff6b00;letter-spacing:2px;margin-bottom:4px">TITLE (copy this)</div>',
+    '<div style="display:flex;gap:8px;margin-bottom:16px">',
+    '<input id="draft-title" value="' + title.replace(/"/g,'&quot;') + '" style="flex:1;background:#f8f8f8;border:1px solid #ddd;border-radius:4px;padding:10px;font-size:13px;color:#0f0f0f">',
+    '<button onclick="copyDraft(\'draft-title\')" style="background:#ff6b00;color:#fff;border:none;border-radius:4px;padding:10px 14px;font-size:11px;font-weight:700;cursor:pointer">COPY</button>',
+    '</div>',
+    '<div style="font-size:10px;color:#ff6b00;letter-spacing:2px;margin-bottom:4px">SUGGESTED PRICE</div>',
+    '<div style="display:flex;gap:8px;margin-bottom:16px">',
+    '<input id="draft-price" value="' + suggestedPrice + '" style="flex:1;background:#f8f8f8;border:1px solid #ddd;border-radius:4px;padding:10px;font-size:13px;color:#0f0f0f">',
+    '<button onclick="copyDraft(\'draft-price\')" style="background:#ff6b00;color:#fff;border:none;border-radius:4px;padding:10px 14px;font-size:11px;font-weight:700;cursor:pointer">COPY</button>',
+    '</div>',
+    '<div style="font-size:10px;color:#ff6b00;letter-spacing:2px;margin-bottom:4px">DESCRIPTION (copy this)</div>',
+    '<div style="display:flex;gap:8px;margin-bottom:16px">',
+    '<textarea id="draft-desc" rows="10" style="flex:1;background:#f8f8f8;border:1px solid #ddd;border-radius:4px;padding:10px;font-size:12px;color:#0f0f0f;resize:none">' + desc + '</textarea>',
+    '<button onclick="copyDraft(\'draft-desc\')" style="background:#ff6b00;color:#fff;border:none;border-radius:4px;padding:10px 14px;font-size:11px;font-weight:700;cursor:pointer;align-self:flex-start">COPY</button>',
+    '</div>',
+    '<div style="font-size:10px;color:#999;margin-bottom:16px">Category: Auto Parts · Condition: Used · Item Location: Your ZIP</div>',
+    '<a href="https://www.ebay.com/sell" target="_blank" style="display:block;background:#0066cc;color:#fff;text-align:center;padding:14px;border-radius:4px;font-size:13px;font-weight:700;text-decoration:none">OPEN EBAY TO LIST →</a>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(modal);
+}
+
 </script>
 
 <div class="scroll-btns">
@@ -643,5 +783,24 @@ function tc(id,rank){
   <button onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Scroll to bottom">↓</button>
 </div>
 
+
+
+<!-- TRACKER -->
+<div class="section" id="step4" style="border-top:3px solid #ff6b00;padding-top:16px;display:none">
+  <div class="label">💰 PROFIT TRACKER</div>
+  <div class="trk-dash">
+    <div class="trk-stat"><div class="trk-val" id="tk-invested">$0</div><div class="trk-lbl">INVESTED</div></div>
+    <div class="trk-stat"><div class="trk-val" id="tk-revenue">$0</div><div class="trk-lbl">REVENUE</div></div>
+    <div class="trk-stat"><div class="trk-val" id="tk-profit">$0</div><div class="trk-lbl">NET PROFIT</div></div>
+    <div class="trk-stat"><div class="trk-val" id="tk-pipeline">$0</div><div class="trk-lbl">IN PIPELINE</div></div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab on" id="tab-pulled" onclick="showTab('pulled')">PULLED</div>
+    <div class="tab" id="tab-listed" onclick="showTab('listed')">LISTED</div>
+    <div class="tab" id="tab-sold" onclick="showTab('sold')">SOLD</div>
+  </div>
+  <div id="trk-list"></div>
+  <button class="btn w" onclick="clearTracker()" style="font-size:11px;padding:10px;color:#333;margin-top:8px">Clear All Tracker Data</button>
+</div>
 </body>
 </html>
