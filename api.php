@@ -2,6 +2,7 @@
 // Load secrets from gitignored file if present, otherwise rely on server env vars.
 $envFile = __DIR__ . '/.env.php';
 if (is_file($envFile)) { require $envFile; }
+require_once __DIR__ . '/ebay-prices.php';
 define('ANTHROPIC_KEY', getenv('ANTHROPIC_API_KEY') ?: '');
 
 ini_set('max_execution_time', '180');
@@ -180,7 +181,18 @@ if ($httpCode < 200 || $httpCode >= 300) {
     fail(502, 'Anthropic HTTP ' . $httpCode . ': ' . substr($response, 0, 500));
 }
 
-// ── INJECT CORRECT LKQ PRICES INTO RESPONSE ───────────────────────────────
+// Build carIndex → vehicle map by parsing the "Car N: YYYY MAKE MODEL [Row X]"
+// lines from the prompt. Used to construct eBay search queries per part.
+$vehiclesByIndex = [];
+if (isset($decoded['messages'][0]['content']) && is_string($decoded['messages'][0]['content'])) {
+    if (preg_match_all('/^Car (\d+): (\d{4}) (\S+) (.+?)(?:\s+Row\s+\S+)?$/m', $decoded['messages'][0]['content'], $vm, PREG_SET_ORDER)) {
+        foreach ($vm as $m) {
+            $vehiclesByIndex[(int)$m[1]] = ['year' => $m[2], 'make' => $m[3], 'model' => trim($m[4])];
+        }
+    }
+}
+
+// ── INJECT LKQ + LIVE EBAY PRICES INTO RESPONSE ───────────────────────────
 $resp = json_decode($response, true);
 if ($resp && isset($resp['content'])) {
     foreach ($resp['content'] as &$block) {
@@ -194,10 +206,30 @@ if ($resp && isset($resp['content'])) {
                 if ($cars && is_array($cars)) {
                     foreach ($cars as &$car) {
                         if (isset($car['parts']) && is_array($car['parts'])) {
+                            $carIdx = isset($car['carIndex']) ? (int)$car['carIndex'] : -1;
+                            $vehicle = isset($vehiclesByIndex[$carIdx]) ? $vehiclesByIndex[$carIdx] : null;
                             foreach ($car['parts'] as &$part) {
-                                $result = findLKQPrice($part['name'], $LKQ);
-                                $part['lkqPrice'] = round($result['price'], 2);
-                                $part['lkqMatched'] = $result['matched'];
+                                $lk = findLKQPrice($part['name'], $LKQ);
+                                $part['lkqPrice'] = round($lk['price'], 2);
+                                $part['lkqMatched'] = $lk['matched'];
+
+                                // Live eBay lookup. Skip the override if eBay's median
+                                // is < 40% of Claude's estimate — that's a strong signal
+                                // of "accessory bleed" (e.g. searching ECU returns lots
+                                // of $20 ECU brackets and pin connectors). Falls back to
+                                // the AI estimate in that case.
+                                $part['ebaySource'] = 'ai_estimate';
+                                if ($vehicle) {
+                                    $query = $vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model'] . ' ' . $part['name'];
+                                    $ebay = ebaySearchMedian($query);
+                                    $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
+                                    if ($ebay && ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4)) {
+                                        $part['ebayAvg'] = $ebay['avg'];
+                                        $part['ebayLow'] = $ebay['low'];
+                                        $part['ebayHigh'] = $ebay['high'];
+                                        $part['ebaySource'] = 'ebay_' . $ebay['count'];
+                                    }
+                                }
                             }
                         }
                     }
