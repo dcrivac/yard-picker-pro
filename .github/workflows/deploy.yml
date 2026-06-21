@@ -18,4 +18,6 @@ jobs:
           script: |
             cd ~/public_html
             git remote set-url origin git@github.com:dcrivac/yard-picker-pro.git
+            git fetch origin main
+            git checkout -- .
             git pull origin main
