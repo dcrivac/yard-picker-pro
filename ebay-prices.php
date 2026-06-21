@@ -1,4 +1,9 @@
 <?php
+// Force shortest round-trip-safe float representation so json_encode doesn't
+// emit "28.989999999999998..." for what should print as 28.99 on hosts where
+// the default serialize_precision is set high (e.g. SiteGround).
+ini_set('serialize_precision', '-1');
+
 // eBay Browse API helper: cached OAuth token + median price lookup.
 //
 // Public surface: ebaySearchMedian($query) returns
