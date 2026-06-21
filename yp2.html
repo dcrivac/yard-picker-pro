@@ -550,7 +550,7 @@ function runAnalyze(){
         }
         var avg=Number(p.ebayAvg)||80,lkq=Number(p.lkqPrice)||lkqLookup(p.name)||50,hrs=labLookup(p.name)||1.0;
         var labor=hrs*rate,fees=avg*EFEE,net=avg-lkq-labor-fees-ESHIP;
-        return{name:p.name,reason:p.reason||'',ebayAvg:avg,ebayLow:p.ebayLow||Math.round(avg*.65),ebayHigh:p.ebayHigh||Math.round(avg*1.4),lkqCost:lkq,pullHrs:hrs,laborCost:labor,ebayFees:fees,netProfit:net};
+        return{name:p.name,reason:p.reason||'',ebayAvg:avg,ebayLow:p.ebayLow||Math.round(avg*.65),ebayHigh:p.ebayHigh||Math.round(avg*1.4),ebaySource:p.ebaySource||'ai_estimate',lkqCost:lkq,pullHrs:hrs,laborCost:labor,ebayFees:fees,netProfit:net};
       }).sort(function(a,b){return b.netProfit-a.netProfit;});
       var tp=parts.reduce(function(s,p){return s+Math.max(0,p.netProfit);},0);
       var th=parts.reduce(function(s,p){return s+p.pullHrs;},0);
@@ -601,7 +601,8 @@ function renderResults(rate){
       h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right;color:#aaa">'+fmtD(p.ebayAvg)+' eBay</span></div>';
       if(p.reason)h+='<div class="pr">'+p.reason+'</div>';
       h+='<div class="pb">';
-      h+='<div><span class="k">eBay avg <span style="font-size:9px;color:#333">(AI est.)</span></span><span class="v vp">'+fmtD(p.ebayAvg)+'</span></div>';
+      var src=(p.ebaySource||'').indexOf('ebay_')===0?'<span style="font-size:9px;color:#2e7d32">(live · '+p.ebaySource.slice(5)+' listings)</span>':'<span style="font-size:9px;color:#333">(AI est.)</span>';
+      h+='<div><span class="k">eBay avg '+src+'</span><span class="v vp">'+fmtD(p.ebayAvg)+'</span></div>';
       h+='<div><span class="k">eBay range</span><span class="v" style="color:#444">'+fmt(p.ebayLow)+' – '+fmt(p.ebayHigh)+'</span></div>';
       h+='<div><span class="k">PYP Total Price<span style="font-size:9px;color:#888"> (base+core+guarantee)</span></span><span class="v vm2">–'+fmtD(p.lkqCost)+'</span></div>';
       h+='<div><span class="k">Labor '+p.pullHrs.toFixed(1)+'h × $'+rate+'</span><span class="v vm2">–'+fmtD(p.laborCost)+'</span></div>';
