@@ -61,6 +61,12 @@ function ebaySearchMedian($query) {
     $query = trim($query);
     if ($query === '') return null;
 
+    // Strip "accessory bleed" listings — searches like "ECU" otherwise
+    // return tons of $10-30 brackets, pin connectors, mounting clips,
+    // and harnesses that drag the median below the real part's price.
+    // eBay treats "-word" as a negative term (must NOT appear).
+    $query .= ' -bracket -pin -connector -harness -clip -mount -cover';
+
     $key       = hash('sha256', strtolower($query));
     $cacheFile = sys_get_temp_dir() . '/yp-ebay-' . $key . '.json';
     if (is_file($cacheFile) && filemtime($cacheFile) > time() - 86400) {
