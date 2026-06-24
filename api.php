@@ -4,6 +4,10 @@ $envFile = __DIR__ . '/.env.php';
 if (is_file($envFile)) { require $envFile; }
 require_once __DIR__ . '/ebay-prices.php';
 define('ANTHROPIC_KEY', getenv('ANTHROPIC_API_KEY') ?: '');
+// Daily Anthropic spend ceiling (USD) across ALL users — circuit breaker
+// against a viral-traffic surprise bill. Approximate; based on token usage
+// returned by Anthropic. Tune via env var; default $5/day.
+define('DAILY_COST_CEILING_USD', (float)(getenv('DAILY_COST_CEILING_USD') ?: 5));
 
 ini_set('max_execution_time', '180');
 ini_set('max_input_time', '180');
@@ -16,6 +20,34 @@ function fail($status, $logMessage) {
     http_response_code($status);
     echo json_encode(['error' => ['message' => 'Request failed']]);
     exit;
+}
+
+// Per-day Anthropic cost tracking. File auto-rotates by date so old days
+// drop off without manual cleanup. Race on concurrent writes is acceptable
+// (a few cents of slop on a $5 ceiling).
+function dailyCostFile() {
+    return sys_get_temp_dir() . '/yp-cost-' . gmdate('Y-m-d') . '.txt';
+}
+function getDailyCost() {
+    $f = dailyCostFile();
+    return is_file($f) ? (float)trim(@file_get_contents($f)) : 0.0;
+}
+function recordCost($model, $usage) {
+    if (!isset($usage['input_tokens'], $usage['output_tokens'])) return;
+    // Approx public pricing per million tokens: Haiku $1/$5, Sonnet $3/$15.
+    if (strpos($model, 'sonnet') !== false) { $pin = 3;  $pout = 15; }
+    else                                    { $pin = 1;  $pout = 5;  }
+    $cost = ($usage['input_tokens'] * $pin + $usage['output_tokens'] * $pout) / 1_000_000;
+    $fp = @fopen(dailyCostFile(), 'c+');
+    if (!$fp) return;
+    if (flock($fp, LOCK_EX)) {
+        $cur = (float)stream_get_contents($fp);
+        rewind($fp);
+        ftruncate($fp, 0);
+        fwrite($fp, (string)($cur + $cost));
+        flock($fp, LOCK_UN);
+    }
+    fclose($fp);
 }
 
 // CORS allowlist — only crivac.com origins may call this endpoint.
@@ -55,6 +87,23 @@ if (count($entries) >= $limit) {
 }
 $entries[] = $now;
 @file_put_contents($bucket, implode("\n", $entries), LOCK_EX);
+
+// Daily per-IP request cap. Auto-rotates by date. A real yard session is
+// ~6-10 calls (1 OCR + 5 batches of 5 cars); 50/day per IP gives ~5-8
+// sessions/day per user — enough for one person, hard to abuse.
+$dailyBucket = sys_get_temp_dir() . '/yp-rl-day-' . hash('sha256', $ip) . '-' . gmdate('Y-m-d');
+$dailyCount  = is_file($dailyBucket) ? (int)@file_get_contents($dailyBucket) : 0;
+if ($dailyCount >= 50) {
+    header('Retry-After: 86400');
+    fail(429, 'Daily request limit exceeded for ' . $ip);
+}
+@file_put_contents($dailyBucket, $dailyCount + 1, LOCK_EX);
+
+// Global daily cost ceiling — circuit breaker against viral-spike bills.
+if (getDailyCost() >= DAILY_COST_CEILING_USD) {
+    header('Retry-After: 3600');
+    fail(503, 'Daily cost ceiling reached ($' . DAILY_COST_CEILING_USD . ')');
+}
 
 // Bound request body size (Content-Length is advisory; we re-check after read).
 $declared = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
@@ -179,6 +228,12 @@ if (!$response)  { fail(502, 'Empty response from Anthropic (HTTP ' . $httpCode 
 if ($httpCode < 200 || $httpCode >= 300) {
     // Don't proxy upstream error messages — they reveal billing/quota state.
     fail(502, 'Anthropic HTTP ' . $httpCode . ': ' . substr($response, 0, 500));
+}
+
+// Tally this call's token cost toward the daily ceiling.
+$parsedResp = json_decode($response, true);
+if (isset($parsedResp['usage']) && isset($decoded['model'])) {
+    recordCost($decoded['model'], $parsedResp['usage']);
 }
 
 // Build carIndex → vehicle map by parsing the "Car N: YYYY MAKE MODEL [Row X]"
