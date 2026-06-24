@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Yard Picker">
 <title>Yard Picker Pro</title>
+<script defer src="https://cloud.umami.is/script.js" data-website-id="d2711bf3-1b3b-44fa-be2d-6d086d45a68c"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:#111111;color:#f0f0f0;font-family:-apple-system,sans-serif;padding:16px;max-width:480px;margin:0 auto;padding-bottom:80px}
@@ -494,6 +495,7 @@ function runAnalyze(){
   var pool = sel.length > 0 ? sel : filtered;
   var batch = pool.slice(offset, offset+5);
   if(!batch.length){S('er','No more vehicles to analyze.');return;}
+  if(window.umami)umami.track('analyze_clicked',{count:batch.length});
   document.getElementById('bAnalyze').disabled=true;
   document.getElementById('bMore').disabled=true;
   var rate=parseFloat(document.getElementById('rate').value)||20;
@@ -509,6 +511,7 @@ function runAnalyze(){
     L('✅ Analysis done!');
     var carData=parseJSON(txt);
     if(!carData){L('❌ Could not parse results');S('er','Could not parse results. Try again.');return;}
+    if(window.umami)umami.track('analysis_complete',{cars:carData.length});
     var newRes=carData.map(function(car){
       var orig=batch[car.carIndex]||batch[0]||{};
       var parts=(car.parts||[]).map(function(p){
@@ -611,7 +614,7 @@ function renderResults(rate){
       h+='<div style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:6px"><span class="k" style="color:#aaa;font-weight:700">NET PROFIT</span><span class="v vtot" style="color:'+nc+'">'+fmtD(p.netProfit)+'</span></div>';
       var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+p.name+' '+car.year+' '+car.make+' '+car.model);
       h+='</div><div style="display:flex;border-top:2px solid #f0f0f0">';
-      h+='<a href="'+eu+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
+      h+='<a href="'+eu+'" target="_blank" onclick="if(window.umami)umami.track(\'ebay_link_clicked\')" class="eb" style="flex:1;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
       h+='<a href="'+yt+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #f0f0f0;text-align:center;margin:0;padding:8px 10px">🔧 Remove →</a>';
       var tid='t'+Date.now()+Math.random().toString(36).slice(2,5);
       window._tdata=window._tdata||{};
@@ -646,6 +649,7 @@ function saveT(d){try{localStorage.setItem(TKEY,JSON.stringify(d));}catch(e){}}
 function addToTracker(item){
   var d=loadT();
   if(d.find(function(x){return x.id===item.id;})){alert(item.part+' already tracked');return;}
+  if(window.umami)umami.track('add_to_tracker',{part:item.part});
   item.status='pulled';item.pulledAt=Date.now();
   d.push(item);saveT(d);renderT();
   document.getElementById('step4').scrollIntoView({behavior:'smooth'});
