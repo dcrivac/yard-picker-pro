@@ -57,18 +57,29 @@ function ebayGetToken() {
     return $data['access_token'];
 }
 
-function ebaySearchMedian($query, $priceFloor = 0) {
+function ebaySearchMedian($query, $priceFloor = 0, $compat = null) {
     $query = trim($query);
     if ($query === '') return null;
 
-    // Note: eBay's Browse API silently ignores "-word" negation in q.
-    // Accessory bleed (sensor brackets, ECU pins, etc. dragging medians
-    // down) is now filtered by $priceFloor instead — usually derived
-    // from Claude's AI estimate so it floats per-part automatically.
+    // $compat is an optional associative array like
+    //   ['Year' => '2004', 'Make' => 'Ford', 'Model' => 'E-150']
+    // Passes through to eBay's structured compatibility_filter so we
+    // get only auto-parts listings tagged as fitting the specific
+    // vehicle — way better than fuzzy keyword matching against
+    // year/make/model words in the title.
+    $compatStr = '';
+    if (is_array($compat) && !empty($compat)) {
+        $pairs = [];
+        foreach ($compat as $k => $v) {
+            $v = trim((string)$v);
+            if ($v !== '') $pairs[] = $k . ':' . $v;
+        }
+        $compatStr = implode(';', $pairs);
+    }
 
     $priceFloor = max(0, (float)$priceFloor);
 
-    $key       = hash('sha256', strtolower($query) . '|' . $priceFloor);
+    $key       = hash('sha256', strtolower($query) . '|' . $priceFloor . '|' . $compatStr);
     $cacheFile = sys_get_temp_dir() . '/yp-ebay-' . $key . '.json';
     if (is_file($cacheFile) && filemtime($cacheFile) > time() - 86400) {
         $cached = json_decode(@file_get_contents($cacheFile), true);
@@ -78,11 +89,15 @@ function ebaySearchMedian($query, $priceFloor = 0) {
     $token = ebayGetToken();
     if (!$token) return null;
 
-    $url = 'https://api.ebay.com/buy/browse/v1/item_summary/search?' . http_build_query([
+    $params = [
         'q'      => $query,
         'filter' => 'conditions:{USED|FOR_PARTS_OR_NOT_WORKING},buyingOptions:{FIXED_PRICE}',
         'limit'  => 50,
-    ]);
+    ];
+    if ($compatStr !== '') {
+        $params['compatibility_filter'] = $compatStr;
+    }
+    $url = 'https://api.ebay.com/buy/browse/v1/item_summary/search?' . http_build_query($params);
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [
