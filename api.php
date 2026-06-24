@@ -280,22 +280,25 @@ if ($resp && isset($resp['content'])) {
                                 // same query and is strictly better than any guess.
                                 $part['ebaySource'] = 'ai_estimate';
                                 if ($vehicle) {
-                                    // Clean the part name and trim the model down to its first
-                                    // word. Long messy queries like "2004 FORD E-150 CLUB WAGON
-                                    // Transmission (Auto)" cause eBay to return garbage — it
-                                    // matches against "CLUB" keychains, "Auto" parts, etc.
-                                    // Year + make + first model word is enough specificity.
+                                    // Use eBay's structured compatibility_filter for vehicle
+                                    // matching, not free-text keywords. Pass Year/Make/Model
+                                    // separately so eBay only returns listings tagged as
+                                    // fitting the specific vehicle. The q param becomes just
+                                    // the cleaned part name (no vehicle words at all).
                                     $cleanPart = preg_replace('/\([^)]*\)/', '', $part['name']);
                                     $cleanPart = str_replace('/', ' ', $cleanPart);
                                     $cleanPart = trim(preg_replace('/\s+/', ' ', $cleanPart));
                                     $modelWords = explode(' ', trim($vehicle['model']));
-                                    $cleanModel = $modelWords[0];
-                                    $query = $vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $cleanModel . ' ' . $cleanPart;
+                                    $compat = [
+                                        'Year'  => $vehicle['year'],
+                                        'Make'  => ucfirst(strtolower($vehicle['make'])),
+                                        'Model' => $modelWords[0],
+                                    ];
                                     // Use Claude's estimate as a per-listing price floor — listings
                                     // far below the estimate are almost always accessory bleed.
                                     $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
                                     $floor = $aiAvg > 0 ? $aiAvg * 0.25 : 0;
-                                    $ebay = ebaySearchMedian($query, $floor);
+                                    $ebay = ebaySearchMedian($cleanPart, $floor, $compat);
                                     if ($ebay) {
                                         if ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4) {
                                             $part['ebayAvg'] = $ebay['avg'];
