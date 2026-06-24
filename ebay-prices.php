@@ -99,11 +99,19 @@ function ebaySearchMedian($query) {
     $data  = json_decode($resp, true);
     $items = isset($data['itemSummaries']) ? $data['itemSummaries'] : [];
     $prices = [];
+    $shipPrices = [];
     foreach ($items as $item) {
         if (isset($item['price']['value']) && is_numeric($item['price']['value'])) {
             $p = (float)$item['price']['value'];
             // Strip junk: $1 listings, $9999 buy-it-now placeholders.
             if ($p >= 5 && $p <= 10000) $prices[] = $p;
+        }
+        // Extract real shipping cost when seller fixed-priced it. Skip
+        // CALCULATED (depends on destination) and local-pickup-only listings.
+        if (!empty($item['shippingOptions'][0]['shippingCost']['value'])
+            && is_numeric($item['shippingOptions'][0]['shippingCost']['value'])) {
+            $sp = (float)$item['shippingOptions'][0]['shippingCost']['value'];
+            if ($sp >= 1 && $sp <= 500) $shipPrices[] = $sp;
         }
     }
     if (count($prices) < 3) return null;
@@ -113,10 +121,21 @@ function ebaySearchMedian($query) {
     $low    = $prices[(int)floor($n * 0.10)];
     $high   = $prices[(int)floor($n * 0.90)];
 
+    // Shipping median (null if not enough fixed-price listings included it).
+    $shipMedian = null;
+    if (count($shipPrices) >= 3) {
+        sort($shipPrices);
+        $sn = count($shipPrices);
+        $shipMedian = ($sn % 2)
+            ? $shipPrices[intdiv($sn, 2)]
+            : ($shipPrices[$sn/2 - 1] + $shipPrices[$sn/2]) / 2;
+    }
+
     $result = [
-        'avg'   => round($median, 2),
-        'low'   => round($low, 2),
-        'high'  => round($high, 2),
+        'avg'      => round($median, 2),
+        'low'      => round($low, 2),
+        'high'     => round($high, 2),
+        'shipping' => $shipMedian !== null ? round($shipMedian, 2) : null,
         'count' => $n,
     ];
     @file_put_contents($cacheFile, json_encode($result), LOCK_EX);
