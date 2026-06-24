@@ -57,17 +57,18 @@ function ebayGetToken() {
     return $data['access_token'];
 }
 
-function ebaySearchMedian($query) {
+function ebaySearchMedian($query, $priceFloor = 0) {
     $query = trim($query);
     if ($query === '') return null;
 
-    // Strip "accessory bleed" listings — searches like "ECU" otherwise
-    // return tons of $10-30 brackets, pin connectors, mounting clips,
-    // and harnesses that drag the median below the real part's price.
-    // eBay treats "-word" as a negative term (must NOT appear).
-    $query .= ' -bracket -pin -connector -harness -clip -mount -cover';
+    // Note: eBay's Browse API silently ignores "-word" negation in q.
+    // Accessory bleed (sensor brackets, ECU pins, etc. dragging medians
+    // down) is now filtered by $priceFloor instead — usually derived
+    // from Claude's AI estimate so it floats per-part automatically.
 
-    $key       = hash('sha256', strtolower($query));
+    $priceFloor = max(0, (float)$priceFloor);
+
+    $key       = hash('sha256', strtolower($query) . '|' . $priceFloor);
     $cacheFile = sys_get_temp_dir() . '/yp-ebay-' . $key . '.json';
     if (is_file($cacheFile) && filemtime($cacheFile) > time() - 86400) {
         $cached = json_decode(@file_get_contents($cacheFile), true);
@@ -109,8 +110,10 @@ function ebaySearchMedian($query) {
     foreach ($items as $item) {
         if (isset($item['price']['value']) && is_numeric($item['price']['value'])) {
             $p = (float)$item['price']['value'];
-            // Strip junk: $1 listings, $9999 buy-it-now placeholders.
-            if ($p >= 5 && $p <= 10000) $prices[] = $p;
+            // Strip junk: $1 listings, $9999 buy-it-now placeholders,
+            // and anything below the AI-derived floor (accessory bleed).
+            $minPrice = max(5, $priceFloor);
+            if ($p >= $minPrice && $p <= 10000) $prices[] = $p;
         }
         // Extract real shipping cost when seller fixed-priced it. Skip
         // CALCULATED (depends on destination) and local-pickup-only listings.
