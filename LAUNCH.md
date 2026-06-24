@@ -179,13 +179,13 @@ Each phase is shippable on its own. Don't start phase N until N-1 is in producti
 
 Goal: app survives being shared publicly without bleeding money.
 
-- [ ] **Daily cost ceiling** in `api.php`. Track today's spend in a counter file; return "service paused for the day" if it exceeds $X. Prevents catastrophic surprise bills.
-- [ ] **Tighter per-IP rate limit** for unauthenticated users (e.g. 3 analyses/day, not 10/min).
-- [ ] **Analytics**: Plausible or Umami (privacy-friendly, no cookie banner needed). Track: unique visitors, sessions started, sessions completed, error rate.
-- [ ] **Error reporting**: Sentry free tier for client-side JS errors and server-side PHP errors.
-- [ ] **ToS + Privacy Policy** pages. Required for both Anthropic and eBay commercial usage.
-- [ ] **Buy a real domain** (e.g. `yardpickerpro.com`) and redirect from `crivac.com/yp2.html`.
-- [ ] **Feedback channel**: Tally.so form or Discord. Lets early users report bugs.
+- [x] **Daily cost ceiling** in `api.php` — PR #17. $5/day default, tunable via `DAILY_COST_CEILING_USD` env var.
+- [x] **Tighter per-IP rate limit** — PR #17. 50 req/day per IP, on top of the existing 10/min limit.
+- [x] **Analytics** — PR #18. Umami Cloud free tier, no cookie banner. Tracking site visits + 4 custom funnel events (`analyze_clicked`, `analysis_complete`, `ebay_link_clicked`, `add_to_tracker`).
+- [x] **Error reporting** — PR #22. Sentry Loader Script on both `yp2.html` and `index.html`. PHP-side server errors still go to `error_log` only; can add Sentry PHP SDK later if needed.
+- [x] **ToS + Privacy Policy** pages — PR #19. `/terms.html` + `/privacy.html`, linked from both footers. Effective date / jurisdiction / business name are placeholders to revisit when forming an LLC.
+- [x] **Feedback channel** — PR #21. `mailto:` link for now; swap to a Tally form URL later if email volume gets noisy.
+- [ ] **Buy a real domain** (e.g. `yardpickerpro.com`) and redirect from `crivac.com/yp2.html`. Manual purchase + DNS step.
 
 ### Phase 2 — accounts + auth
 
