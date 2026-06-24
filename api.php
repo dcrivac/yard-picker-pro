@@ -280,10 +280,19 @@ if ($resp && isset($resp['content'])) {
                                 // same query and is strictly better than any guess.
                                 $part['ebaySource'] = 'ai_estimate';
                                 if ($vehicle) {
-                                    $query = $vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model'] . ' ' . $part['name'];
+                                    // Clean the part name and trim the model down to its first
+                                    // word. Long messy queries like "2004 FORD E-150 CLUB WAGON
+                                    // Transmission (Auto)" cause eBay to return garbage — it
+                                    // matches against "CLUB" keychains, "Auto" parts, etc.
+                                    // Year + make + first model word is enough specificity.
+                                    $cleanPart = preg_replace('/\([^)]*\)/', '', $part['name']);
+                                    $cleanPart = str_replace('/', ' ', $cleanPart);
+                                    $cleanPart = trim(preg_replace('/\s+/', ' ', $cleanPart));
+                                    $modelWords = explode(' ', trim($vehicle['model']));
+                                    $cleanModel = $modelWords[0];
+                                    $query = $vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $cleanModel . ' ' . $cleanPart;
                                     // Use Claude's estimate as a per-listing price floor — listings
-                                    // far below the estimate are almost always accessory bleed
-                                    // (brackets, pin connectors, harnesses sharing the part keyword).
+                                    // far below the estimate are almost always accessory bleed.
                                     $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
                                     $floor = $aiAvg > 0 ? $aiAvg * 0.25 : 0;
                                     $ebay = ebaySearchMedian($query, $floor);
