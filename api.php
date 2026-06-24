@@ -126,7 +126,7 @@ if (!$modelOk) { fail(400, 'Disallowed model: ' . $decoded['model']); }
 if (!isset($decoded['messages']) || !is_array($decoded['messages']) || count($decoded['messages']) === 0) {
     fail(400, 'Missing or empty messages');
 }
-if (isset($decoded['max_tokens']) && (!is_int($decoded['max_tokens']) || $decoded['max_tokens'] > 4096 || $decoded['max_tokens'] < 1)) {
+if (isset($decoded['max_tokens']) && (!is_int($decoded['max_tokens']) || $decoded['max_tokens'] > 8192 || $decoded['max_tokens'] < 1)) {
     fail(400, 'max_tokens out of range: ' . var_export($decoded['max_tokens'], true));
 }
 
@@ -268,21 +268,31 @@ if ($resp && isset($resp['content'])) {
                                 $part['lkqPrice'] = round($lk['price'], 2);
                                 $part['lkqMatched'] = $lk['matched'];
 
-                                // Live eBay lookup. Skip the override if eBay's median
-                                // is < 40% of Claude's estimate — that's a strong signal
+                                // Live eBay lookup. Skip the price override if eBay's
+                                // median is < 40% of Claude's estimate — strong signal
                                 // of "accessory bleed" (e.g. searching ECU returns lots
-                                // of $20 ECU brackets and pin connectors). Falls back to
-                                // the AI estimate in that case.
+                                // of $20 ECU brackets and pin connectors). Falls back
+                                // to the AI estimate in that case.
+                                //
+                                // Shipping is taken from eBay whenever available
+                                // (independent of the price-override decision) since
+                                // it's drawn from real fixed-price listings of the
+                                // same query and is strictly better than any guess.
                                 $part['ebaySource'] = 'ai_estimate';
                                 if ($vehicle) {
                                     $query = $vehicle['year'] . ' ' . $vehicle['make'] . ' ' . $vehicle['model'] . ' ' . $part['name'];
                                     $ebay = ebaySearchMedian($query);
-                                    $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
-                                    if ($ebay && ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4)) {
-                                        $part['ebayAvg'] = $ebay['avg'];
-                                        $part['ebayLow'] = $ebay['low'];
-                                        $part['ebayHigh'] = $ebay['high'];
-                                        $part['ebaySource'] = 'ebay_' . $ebay['count'];
+                                    if ($ebay) {
+                                        $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
+                                        if ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4) {
+                                            $part['ebayAvg'] = $ebay['avg'];
+                                            $part['ebayLow'] = $ebay['low'];
+                                            $part['ebayHigh'] = $ebay['high'];
+                                            $part['ebaySource'] = 'ebay_' . $ebay['count'];
+                                        }
+                                        if (isset($ebay['shipping']) && $ebay['shipping'] !== null) {
+                                            $part['shipping'] = $ebay['shipping'];
+                                        }
                                     }
                                 }
                             }
