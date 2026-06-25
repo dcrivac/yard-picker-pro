@@ -57,7 +57,7 @@ function ebayGetToken() {
     return $data['access_token'];
 }
 
-function ebaySearchMedian($query, $priceFloor = 0, $compat = null) {
+function ebaySearchMedian($query, $compat = null) {
     $query = trim($query);
     if ($query === '') return null;
 
@@ -77,9 +77,7 @@ function ebaySearchMedian($query, $priceFloor = 0, $compat = null) {
         $compatStr = implode(';', $pairs);
     }
 
-    $priceFloor = max(0, (float)$priceFloor);
-
-    $key       = hash('sha256', strtolower($query) . '|' . $priceFloor . '|' . $compatStr);
+    $key       = hash('sha256', strtolower($query) . '|' . $compatStr);
     $cacheFile = sys_get_temp_dir() . '/yp-ebay-' . $key . '.json';
     if (is_file($cacheFile) && filemtime($cacheFile) > time() - 86400) {
         $cached = json_decode(@file_get_contents($cacheFile), true);
@@ -125,10 +123,8 @@ function ebaySearchMedian($query, $priceFloor = 0, $compat = null) {
     foreach ($items as $item) {
         if (isset($item['price']['value']) && is_numeric($item['price']['value'])) {
             $p = (float)$item['price']['value'];
-            // Strip junk: $1 listings, $9999 buy-it-now placeholders,
-            // and anything below the AI-derived floor (accessory bleed).
-            $minPrice = max(5, $priceFloor);
-            if ($p >= $minPrice && $p <= 10000) $prices[] = $p;
+            // Strip junk: $1 listings, $9999 buy-it-now placeholders.
+            if ($p >= 5 && $p <= 10000) $prices[] = $p;
         }
         // Extract real shipping cost when seller fixed-priced it. Skip
         // CALCULATED (depends on destination) and local-pickup-only listings.
@@ -140,8 +136,17 @@ function ebaySearchMedian($query, $priceFloor = 0, $compat = null) {
     }
     if (count($prices) < 3) return null;
     sort($prices);
-    $n      = count($prices);
-    $median = ($n % 2) ? $prices[intdiv($n, 2)] : ($prices[$n/2 - 1] + $prices[$n/2]) / 2;
+    $n = count($prices);
+
+    // Median of the upper half (top 50%) instead of all prices. Defeats
+    // "accessory bleed" — cheap mounts, sensors, brackets, etc. that
+    // share a compat tag with the real part get pushed out of the
+    // computation. For clean queries (where most listings are the real
+    // part), this slightly inflates the avg vs the true median; for
+    // noisy queries, it surfaces the actual part's price band.
+    $upper  = array_slice($prices, (int)floor($n / 2));
+    $un     = count($upper);
+    $median = ($un % 2) ? $upper[intdiv($un, 2)] : ($upper[$un/2 - 1] + $upper[$un/2]) / 2;
     $low    = $prices[(int)floor($n * 0.10)];
     $high   = $prices[(int)floor($n * 0.90)];
 

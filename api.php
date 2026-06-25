@@ -294,11 +294,8 @@ if ($resp && isset($resp['content'])) {
                                         'Make'  => ucfirst(strtolower($vehicle['make'])),
                                         'Model' => $modelWords[0],
                                     ];
-                                    // Use Claude's estimate as a per-listing price floor — listings
-                                    // far below the estimate are almost always accessory bleed.
                                     $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
-                                    $floor = $aiAvg > 0 ? $aiAvg * 0.25 : 0;
-                                    $ebay = ebaySearchMedian($cleanPart, $floor, $compat);
+                                    $ebay  = ebaySearchMedian($cleanPart, $compat);
                                     if ($ebay) {
                                         if ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4) {
                                             $part['ebayAvg'] = $ebay['avg'];

@@ -39,7 +39,7 @@ foreach (['Year' => 'year', 'Make' => 'make', 'Model' => 'model'] as $k => $para
     }
 }
 
-$result = ebaySearchMedian($q, 0, $compat);
+$result = ebaySearchMedian($q, $compat);
 if (!$result) {
     echo json_encode(['error' => 'No data', 'q' => $q, 'compat' => $compat]);
     exit;
