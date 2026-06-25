@@ -29,9 +29,19 @@ if ($q === '' || strlen($q) > 200) {
     exit;
 }
 
-$result = ebaySearchMedian($q);
+// Optional vehicle compatibility passthrough so we can test the
+// compatibility_filter path from curl.
+$compat = null;
+foreach (['Year' => 'year', 'Make' => 'make', 'Model' => 'model'] as $k => $param) {
+    if (!empty($_GET[$param])) {
+        $compat = $compat ?: [];
+        $compat[$k] = trim($_GET[$param]);
+    }
+}
+
+$result = ebaySearchMedian($q, 0, $compat);
 if (!$result) {
-    echo json_encode(['error' => 'No data', 'q' => $q]);
+    echo json_encode(['error' => 'No data', 'q' => $q, 'compat' => $compat]);
     exit;
 }
 echo json_encode($result);
