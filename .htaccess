@@ -1,5 +1,7 @@
-# Prevent HTML files from being cached by CDN or browser
-<FilesMatch "\.html$">
+# Prevent HTML and PHP files from being cached by the CDN or browser.
+# SiteGround Dynamic Cache otherwise pins 404 responses for new endpoints
+# and serves stale data from older PHP responses across deploys.
+<FilesMatch "\.(html|php)$">
     Header set Cache-Control "no-cache, no-store, must-revalidate"
     Header set Pragma "no-cache"
     Header set Expires "0"
