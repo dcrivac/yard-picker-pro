@@ -72,25 +72,29 @@ while ($page <= 20) {
 
     $pageCount = 0;
 
-    // Method 1: alt text on vehicle images
-    preg_match_all('/alt="(\d{4})\s+([A-Z][A-Z0-9\s\-]+?)\s+available for parts"/i', $html, $am);
-    foreach ($am[1] as $i => $year) {
-        $fullName = trim($am[2][$i]);
+    // Method 1: anchor on each pypvi_resultRow div, extract row + vehicle
+    // from that one row's HTML. The Row tag appears BEFORE the alt text
+    // in the current PYP markup, so the old "search forward from alt text"
+    // approach missed every row. Pure-digit rows like "71" are now common
+    // (Chula Vista); the regex also handles legacy letter+digit rows like "L9".
+    preg_match_all('/<div class="pypvi_resultRow"[^>]*>/i', $html, $starts, PREG_OFFSET_CAPTURE);
+    foreach ($starts[0] as $i => $start) {
+        $pos = $start[1];
+        $next = isset($starts[0][$i + 1]) ? $starts[0][$i + 1][1] : $pos + 3000;
+        $sec = substr($html, $pos, $next - $pos);
+        if (!preg_match('/alt="(\d{4})\s+([A-Z][A-Z0-9\s\-]+?)\s+available for parts"/i', $sec, $am)) continue;
+        $year     = $am[1];
+        $fullName = trim($am[2]);
         $p        = explode(' ', $fullName, 2);
         $make     = strtoupper($p[0]);
         $model    = strtoupper(isset($p[1]) ? $p[1] : '');
         $key      = $year . '|' . $make . '|' . $model;
-        if (!isset($seen[$key])) {
-            $row  = '';
-            $pos2 = strpos($html, $year . ' ' . $fullName);
-            if ($pos2 !== false) {
-                $ctx = substr($html, max(0, $pos2 - 50), 1200);
-                if (preg_match('/\bRow[:\s><b]*([A-Z]\d+)/i', $ctx, $rm)) $row = $rm[1];
-            }
-            $seen[$key] = true;
-            $vehicles[] = ['year'=>$year,'make'=>$make,'model'=>$model,'row'=>$row];
-            $pageCount++;
-        }
+        if (isset($seen[$key])) continue;
+        $row = '';
+        if (preg_match('/Row:?[\s<>\/b]+([A-Z]?\d+)/i', $sec, $rm)) $row = $rm[1];
+        $seen[$key] = true;
+        $vehicles[] = ['year'=>$year,'make'=>$make,'model'=>$model,'row'=>$row];
+        $pageCount++;
     }
 
     // Method 2: Compatible Parts links fallback
