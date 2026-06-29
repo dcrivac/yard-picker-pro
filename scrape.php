@@ -2,6 +2,11 @@
 ob_start();
 header('Content-Type: application/json');
 header('Vary: Origin');
+// Defeat SiteGround's CDN caching this dynamic response as a static asset.
+// The .htaccess Cache-Control headers are not respected by their edge.
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 $allowedOrigins = ['https://crivac.com', 'https://www.crivac.com'];
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
