@@ -379,7 +379,7 @@ function updateAnalyzeBtn(){
 // ── API ────────────────────────────────────────────────────────
 function api(body,cb){
   var x=new XMLHttpRequest();
-  x.open('POST','https://crivac.com/api.php',true);
+  x.open('POST','https://crivac.com/api.php?_cb='+Date.now(),true);
   x.setRequestHeader('Content-Type','application/json');
   x.timeout=120000;
   x.ontimeout=function(){cb('Timed out. Try again.');};
@@ -414,7 +414,7 @@ document.getElementById('bFetch').onclick=function(){
   L('▶ Connecting to pyp.com...');
   // Send both url and slug
   var x=new XMLHttpRequest();
-  x.open('GET','https://crivac.com/scrape.php?url='+encodeURIComponent(url)+'&slug='+encodeURIComponent(slug),true);
+  x.open('GET','https://crivac.com/scrape.php?url='+encodeURIComponent(url)+'&slug='+encodeURIComponent(slug)+'&_cb='+Date.now(),true);
   x.timeout=60000;
   x.ontimeout=function(){btn.disabled=false;L('❌ Timed out');S('er','Timed out. Try again.');};
   x.onerror=function(){btn.disabled=false;L('❌ Network error');S('er','Network error.');};
