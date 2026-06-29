@@ -10,6 +10,9 @@
 
 ob_start();
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 $slug = isset($_GET['slug']) ? trim($_GET['slug']) : 'chula-vista-1264';
 $raw  = !empty($_GET['raw']);
