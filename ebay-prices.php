@@ -57,7 +57,7 @@ function ebayGetToken() {
     return $data['access_token'];
 }
 
-function ebaySearchMedian($query, $compat = null) {
+function ebaySearchMedian($query, $compat = null, $categoryId = '6030') {
     $query = trim($query);
     if ($query === '') return null;
 
@@ -67,6 +67,12 @@ function ebaySearchMedian($query, $compat = null) {
     // get only auto-parts listings tagged as fitting the specific
     // vehicle — way better than fuzzy keyword matching against
     // year/make/model words in the title.
+    //
+    // $categoryId is required by eBay whenever compatibility_filter is
+    // used (otherwise the API returns 400 "You must provide a category
+    // ID that supports fitment"). Defaults to 6030 (Car & Truck Parts
+    // & Accessories) which is broad but always valid. Callers pass a
+    // narrower category (e.g. 33596 for Engine Computers) for precision.
     $compatStr = '';
     if (is_array($compat) && !empty($compat)) {
         $pairs = [];
@@ -77,7 +83,7 @@ function ebaySearchMedian($query, $compat = null) {
         $compatStr = implode(';', $pairs);
     }
 
-    $key       = hash('sha256', strtolower($query) . '|' . $compatStr);
+    $key       = hash('sha256', strtolower($query) . '|' . $compatStr . '|' . $categoryId);
     $cacheFile = sys_get_temp_dir() . '/yp-ebay-' . $key . '.json';
     if (is_file($cacheFile) && filemtime($cacheFile) > time() - 86400) {
         $cached = json_decode(@file_get_contents($cacheFile), true);
@@ -88,9 +94,10 @@ function ebaySearchMedian($query, $compat = null) {
     if (!$token) return null;
 
     $params = [
-        'q'      => $query,
-        'filter' => 'conditions:{USED|FOR_PARTS_OR_NOT_WORKING},buyingOptions:{FIXED_PRICE}',
-        'limit'  => 50,
+        'q'           => $query,
+        'category_ids'=> $categoryId,
+        'filter'      => 'conditions:{USED|FOR_PARTS_OR_NOT_WORKING},buyingOptions:{FIXED_PRICE}',
+        'limit'       => 50,
     ];
     if ($compatStr !== '') {
         $params['compatibility_filter'] = $compatStr;
