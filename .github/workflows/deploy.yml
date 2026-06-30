@@ -17,8 +17,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd ~/public_html
+            cd ~/www/crivac.com/public_html
             git remote set-url origin https://github.com/dcrivac/yard-picker-pro.git
             git fetch origin main
-            git checkout -- .
-            git pull origin main
+            git reset --hard origin/main
