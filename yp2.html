@@ -600,7 +600,7 @@ function renderResults(rate){
     h+='<div style="font-size:10px;color:#333" id="cv'+rank+'">'+(rank===0?'▲':'▼')+'</div></div></div>';
     h+='<div class="parts'+(rank===0?' open':'')+'" id="'+id+'">';
     car.parts.forEach(function(p){
-      var nc=p.netProfit>=50?'#ff6b00':p.netProfit>0?'#2e7d32':'#555';
+      var nc=p.netProfit>=50?'#2e7d32':p.netProfit>=0?'#888':'#c62828';
       var eu='https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+p.name)+'&LH_Sold=1&LH_Complete=1';
       h+='<div class="prow">';
       h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right;color:#aaa">'+fmtD(p.ebayAvg)+' eBay</span></div>';
