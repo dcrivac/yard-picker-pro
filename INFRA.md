@@ -46,12 +46,12 @@ secrets: `ANTHROPIC_API_KEY`, `EBAY_VERIFICATION_TOKEN`, `EBAY_CLIENT_ID`,
 ## SiteGround caching traps
 
 1. **Edge/proxy cache** (`x-proxy-cache-info: DT:1` header). Caches GET responses
-   by URL path. It ignores query strings, ignores `.htaccess` `Cache-Control`,
-   and ignores in-PHP `header('Cache-Control: no-store')`. Toggling Dynamic Cache
-   off in Site Tools did not fully clear it. The reliable workaround we used:
-   serve from brand-new paths the proxy has never cached (see `yp-app.html`).
-   The permanent fix is a SiteGround support ticket to purge/disable the edge
-   proxy for the site — still outstanding.
+   by URL path; ignores query strings and `Cache-Control`. This *looked* like the
+   villain for days but the actual cause was the wrong-docroot bug — the proxy was
+   faithfully caching the (stale, decoy-directory) origin. Once deploys hit the
+   real docroot, the proxy served fresh content normally. If you ever see stale
+   GETs again, first confirm the file on disk in the REAL docroot is current
+   (don't chase the cache until you've ruled out the docroot).
 
 2. **PHP OpCache**. Survives `git pull` and file edits. A `touch` of the .php
    files did not reliably clear it; the double PHP-version-toggle in PHP Manager
@@ -60,20 +60,18 @@ secrets: `ANTHROPIC_API_KEY`, `EBAY_VERIFICATION_TOKEN`, `EBAY_CLIENT_ID`,
 3. **POST is not cached** — `api.php` / `yp-api.php` analyses return fresh data
    each time. Only GETs (HTML, scrape.php) hit the path cache.
 
-## The yp-* workaround files
+## The yp-* workaround files (RESOLVED — removed)
 
-Because the edge proxy serves stale copies of `yp2.html` / `api.php` / `scrape.php`,
-we shipped duplicates on fresh paths the proxy never cached:
+There used to be `yp-app.html` / `yp-api.php` / `yp-scrape.php` duplicates on fresh
+paths, created to dodge the edge proxy serving stale copies of the canonical files.
 
-- `yp-app.html`  (copy of yp2.html, points at the two below)
-- `yp-api.php`   (copy of api.php)
-- `yp-scrape.php`(copy of scrape.php)
+Root cause turned out to be the wrong-docroot bug, not the proxy: deploys were
+landing in `~/public_html` (a decoy) instead of `~/www/crivac.com/public_html`.
+Once that was fixed and the real docroot received the current code, the proxy began
+serving fresh content for the canonical paths on its own (no support ticket needed).
 
-**Live app URL today: https://crivac.com/yp-app.html**
-
-These are a temporary kludge. Once SiteGround purges the edge proxy, revert to
-`yp2.html` and delete the `yp-*` files. Until then, any change to api.php/scrape.php
-must be mirrored into yp-api.php/yp-scrape.php (they are kept byte-identical).
+The `yp-*` duplicates were deleted. **Live app URL is back to
+https://crivac.com/yp2.html.** No SiteGround proxy ticket required.
 
 ## eBay Browse API gotchas
 
@@ -102,7 +100,10 @@ Working and verified live (via yp-app.html):
 - Security hardening, rate limits, cost ceiling, Umami analytics, Sentry, ToS/Privacy
 
 Outstanding:
-- [ ] `deploy.yml` still targets the wrong `~/public_html` — auto-deploy is a no-op
-- [ ] SiteGround support ticket to purge edge proxy (then revert yp-* → yp2.html)
-- [ ] Tune wrong eBay category IDs (transmission and others showing AI-est)
+- [ ] Tune wrong eBay category IDs (transmission and others showing AI-est; broad-category fallback covers them for now)
 - [ ] `LAUNCH.md` Phase-1 table is out of date vs what actually shipped
+
+Resolved:
+- [x] `deploy.yml` now targets the real docroot — auto-deploy works (PR #38)
+- [x] Edge-proxy stale content — fixed by the docroot correction, no ticket needed
+- [x] `yp-*` workaround files removed; app back on canonical `yp2.html`
