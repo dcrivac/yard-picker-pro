@@ -133,9 +133,35 @@ if (isset($decoded['max_tokens']) && (!is_int($decoded['max_tokens']) || $decode
     fail(400, 'max_tokens out of range: ' . var_export($decoded['max_tokens'], true));
 }
 
-// ── PYP CHULA VISTA PRICE LIST (Total Price) ─────────────────────────────
+// Maps our curated part names to PYP's raw price-list descriptions, for the
+// ~35 parts where the names differ. Used to look up live per-yard prices
+// without breaking the fuzzy match against Claude's part names. Names not
+// listed here match PYP's description directly (case-insensitively).
+$PYP_NAME_MAP = [
+    "ABS Module"=>"ANTI LOCK BRAKE (ABS UNIT)","Air Injection Pump"=>"AIR INJECTION PUMP (SMOG)",
+    "Axle Assembly Front"=>"AXLE ASSEMBLY,FRONT/LESS BRAKES","Axle Assembly Rear"=>"AXLE ASSEMBLY, REAR CAR/LESS BRAKES",
+    "Battery (Hybrid)"=>"BATTERY (HYBRID BATTERY)","Brake Rotor"=>"BRAKE ROTOR OR DRUM",
+    "Bumper Cover Front"=>"BUMPER COVER, FRONT","Bumper Cover Rear"=>"BUMPER COVER, REAR",
+    "Bumper Reinforcement Rear"=>"BUMPER REINFORCEMENT BAR, REAR","Camshaft"=>"CAMSHAFT/CAMSHAFT CARRIER/ CAMSHAFT HOUSING",
+    "Control Arm Lower"=>"CONTROL ARM LOWER FRONT","Control Arm Upper"=>"CONTROL ARM UPPER FRONT",
+    "DC Converter (Hybrid)"=>"DC CONVERTER (HYBRID/ELECTRIC)","Decklid/Tailgate"=>"DECKLID/TAILGATE (BARE)",
+    "Door Assembly Back"=>"DOOR ASSEMBLY, BACK","Door Front"=>"DOOR, FRONT","Door Rear"=>"DOOR, REAR",
+    "ECU / PCM"=>"ENGINE CONTROL MODULE","Electric Power Steering Pump"=>"POWER STEERING PUMP (ELECTRIC)",
+    "Fender"=>"FENDER (BARE)","Fuel Pump"=>"FUEL PUMP ASSEMBLY",
+    "Fuel Pump (Direct Injection)"=>"FUEL PUMP (DIRECT INJECTION HIGH PRESSURE GAS)","GPS / Navigation Screen"=>"GPS TV SCREEN",
+    "Independent Rear Suspension"=>"INDEPENDENT REAR SUSPENSION ASSEMBLY","Seat (Front)"=>"SEAT 1/2",
+    "Seat (Rear)"=>"SEAT REAR","Starter Motor"=>"STARTER","Steering Rack"=>"STEERING GEAR/RACK (NO MOTOR)",
+    "Strut Assembly"=>"STRUT","Suspension Crossmember"=>"SUSPENSION CROSSMEMBER/K- FRAME (BARE)",
+    "Tail Light"=>"TAILLIGHT (QUARTER MOUNTED)","Taillight"=>"TAILLIGHT (QUARTER MOUNTED)",
+    "Transmission (Auto)"=>"TRANSMISSION","Transmission (Manual)"=>"TRANSMISSION",
+    "Turbocharger"=>"TURBO/ SUPERCHARGER","Window Regulator Rear (Electric)"=>"WINDOW REGULATOR, REAR DOOR (ELECTRIC)",
+];
+
+// ── PYP CHULA VISTA PRICE LIST (Total Price) — FALLBACK ──────────────────
 // Non-Primo prices, refreshed from /DesktopModules/pyp_api/api/PriceList/
 // for locationCode=1264 (Chula Vista). Total = base + core + warranty.
+// Used as the fallback when the live per-yard fetch fails or for parts the
+// live list doesn't contain. fetchYardPrices() overrides these per yard.
 $LKQ = [
     "A/C Compressor"=>86.05,"A/C Compressor Clutch"=>40.30,"A/C Condenser"=>65.10,
     "A/C Dryer"=>23.10,"A/C Evaporator"=>45.95,"A/C Hoses"=>27.30,
@@ -257,6 +283,57 @@ $PART_CATEGORIES = [
     "Wiring Harness (Engine)"=>"33580",
 ];
 
+// Fetch a yard's live PYP price list by locationCode (the trailing number
+// in an inventory slug, e.g. chula-vista-1264 -> 1264). Returns a
+// name=>totalPrice map (non-primo tier; total = base + core + warranty),
+// cached 24h. Returns null on any failure so the caller falls back to the
+// hardcoded Chula Vista $LKQ. This is what makes the app work at every PYP
+// yard and keeps prices fresh without manual edits.
+function fetchYardPrices($slug) {
+    if (!preg_match('/(\d{3,})$/', $slug, $m)) return null;
+    $locationCode = $m[1];
+
+    $cacheFile = sys_get_temp_dir() . '/yp-yard-' . $locationCode . '.json';
+    if (is_file($cacheFile) && filemtime($cacheFile) > time() - 86400) {
+        $cached = json_decode(@file_get_contents($cacheFile), true);
+        if (is_array($cached) && !empty($cached)) return $cached;
+    }
+
+    $ch = curl_init('https://www.pyp.com/DesktopModules/pyp_api/api/PriceList/?locationCode=' . urlencode($locationCode));
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT        => 20,
+        CURLOPT_SSL_VERIFYPEER => true,
+        CURLOPT_SSL_VERIFYHOST => 2,
+        CURLOPT_USERAGENT      => 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+        CURLOPT_HTTPHEADER     => [
+            'x-requested-with: XMLHttpRequest',
+            'Accept: application/json',
+            'Referer: https://www.pyp.com/prices/' . $slug . '/',
+        ],
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($code !== 200 || !$resp) { error_log('[api.php] yard price fetch failed (HTTP ' . $code . ') for ' . $locationCode); return null; }
+
+    $rows = json_decode($resp, true);
+    if (!is_array($rows) || empty($rows)) return null;
+
+    $prices = [];
+    foreach ($rows as $r) {
+        if (!empty($r['IsPrimo'])) continue; // non-primo tier matches our pricing model
+        if (!isset($r['Description'])) continue;
+        $name  = trim($r['Description']);
+        $total = (float)($r['Price'] ?? 0) + (float)($r['Core'] ?? 0) + (float)($r['Warranty'] ?? 0);
+        if ($name !== '' && $total > 0) $prices[$name] = round($total, 2);
+    }
+    if (empty($prices)) return null;
+
+    @file_put_contents($cacheFile, json_encode($prices), LOCK_EX);
+    return $prices;
+}
+
 // Fuzzy match: find best LKQ price for a part name
 function findLKQPrice($name, $lkq) {
     // Exact match first
@@ -319,6 +396,23 @@ if (isset($decoded['messages'][0]['content']) && is_string($decoded['messages'][
     if (preg_match_all('/^Car (\d+): (\d{4}) (\S+) (.+?)(?:\s+Row\s+\S+)?$/m', $decoded['messages'][0]['content'], $vm, PREG_SET_ORDER)) {
         foreach ($vm as $m) {
             $vehiclesByIndex[(int)$m[1]] = ['year' => $m[2], 'make' => $m[3], 'model' => trim($m[4])];
+        }
+    }
+}
+
+// Override the hardcoded Chula Vista prices with this yard's live prices.
+// Keeps our curated $LKQ keys (so Claude part-name matching stays exact) and
+// only swaps the values; parts the live list lacks keep the fallback price.
+$slug = isset($_GET['slug']) ? trim($_GET['slug']) : '';
+if ($slug !== '' && preg_match('/^[a-z0-9-]+$/i', $slug)) {
+    $live = fetchYardPrices($slug);
+    if ($live) {
+        $liveUpper = [];
+        foreach ($live as $desc => $price) $liveUpper[strtoupper(trim($desc))] = $price;
+        foreach ($LKQ as $ourName => $oldPrice) {
+            $pypName = isset($PYP_NAME_MAP[$ourName]) ? $PYP_NAME_MAP[$ourName] : strtoupper($ourName);
+            $k = strtoupper(trim($pypName));
+            if (isset($liveUpper[$k])) $LKQ[$ourName] = $liveUpper[$k];
         }
     }
 }
