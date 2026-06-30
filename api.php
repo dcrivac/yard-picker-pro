@@ -373,8 +373,20 @@ if ($resp && isset($resp['content'])) {
                                     $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
                                     $catId = isset($PART_CATEGORIES[$part['name']]) ? $PART_CATEGORIES[$part['name']] : '6030';
                                     $ebay  = ebaySearchMedian($cleanPart, $compat, $catId);
+                                    // Self-healing fallback: if the narrow per-part category
+                                    // returned nothing usable or a median the 40%-of-AI guard
+                                    // would reject (often a wrong/too-narrow category id),
+                                    // retry once with the broad 6030 category before giving up.
+                                    $usable = $ebay && ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4);
+                                    if (!$usable && $catId !== '6030') {
+                                        $broad = ebaySearchMedian($cleanPart, $compat, '6030');
+                                        if ($broad && ($aiAvg < 1 || $broad['avg'] >= $aiAvg * 0.4)) {
+                                            $ebay = $broad;
+                                            $usable = true;
+                                        }
+                                    }
                                     if ($ebay) {
-                                        if ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4) {
+                                        if ($usable) {
                                             $part['ebayAvg'] = $ebay['avg'];
                                             $part['ebayLow'] = $ebay['low'];
                                             $part['ebayHigh'] = $ebay['high'];
