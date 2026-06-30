@@ -182,6 +182,81 @@ $LKQ = [
     "Wiring Harness (Body)"=>79.00,"Wiring Harness (Dash)"=>45.50,"Wiring Harness (Engine)"=>70.00,
 ];
 
+// ── EBAY MOTORS CATEGORY IDS ──────────────────────────────────────────────
+// Required by eBay's Browse API alongside compatibility_filter. Mapping
+// part names to specific sub-categories filters out unrelated listings
+// (e.g. ECU lookups only see Engine Computers, not random electronics).
+// Falls back to 6030 (Car & Truck Parts & Accessories) if not listed.
+$PART_CATEGORIES = [
+    // Engine internals + accessories
+    "Engine (Long Block)"=>"33615","Cylinder Head"=>"33616","Camshaft"=>"33616",
+    "Crankshaft"=>"33616","Harmonic Balancer"=>"33616","Flywheel"=>"33616",
+    "Intake Manifold"=>"33616","Exhaust Manifold"=>"33616","Oil Pump"=>"33616",
+    "Turbocharger"=>"33616","Water Pump"=>"33616",
+    "Carburetor"=>"33591","Throttle Body"=>"33591","Intercooler"=>"33591",
+    "Air Cleaner"=>"33591","Air Intake Tube"=>"33591","Air Injection Pump"=>"33591",
+    "Fuel Pump"=>"33591","Fuel Pump (Direct Injection)"=>"33591","Fuel Tank"=>"33591",
+    // Engine computers + electronics + sensors
+    "ECU / PCM"=>"33596","Chassis Control Module"=>"33596",
+    "Coil Pack"=>"33580","Distributor"=>"33580","Air Flow Meter"=>"33580",
+    "Actuator"=>"33580","Fuse Box"=>"33580","Sliding Door Motor"=>"33580",
+    "DC Converter (Hybrid)"=>"33580","Air Bag"=>"33580","Airbag Sensor"=>"33580",
+    // Charging + starting
+    "Alternator"=>"33543","Starter Motor"=>"33543","Battery"=>"33543","Battery (Hybrid)"=>"33543",
+    // Cooling + A/C
+    "Radiator"=>"33588","Radiator Core Support"=>"33588",
+    "Radiator/Condenser Fan (Dual)"=>"33588","Radiator/Condenser Fan (Single)"=>"33588",
+    "Heater Core"=>"33588","Fan Clutch"=>"33588",
+    "A/C Compressor"=>"33588","A/C Compressor Clutch"=>"33588",
+    "A/C Condenser"=>"33588","A/C Dryer"=>"33588","A/C Evaporator"=>"33588",
+    "A/C Hoses"=>"33588","A/C Valve"=>"33588","Temperature Control"=>"33588",
+    // Exterior body + glass
+    "Hood"=>"33617","Fender"=>"33564","Quarter Panel"=>"33564",
+    "Decklid/Tailgate"=>"33564","Roof"=>"33564","Dash Panel"=>"33564",
+    "Running Board"=>"33564","Center Pillar"=>"33564",
+    "Bumper Cover Front"=>"33709","Bumper Cover Rear"=>"33709",
+    "Bumper Reinforcement Front"=>"33709","Bumper Reinforcement Rear"=>"33709",
+    "Front Bumper (Steel)"=>"33709","Rear Bumper (Steel)"=>"33709",
+    "Door Front"=>"33724","Door Rear"=>"33724","Door Assembly Back"=>"33724",
+    "Window Regulator Front (Electric)"=>"33724","Window Regulator Front (Manual)"=>"33724",
+    "Window Regulator Rear (Electric)"=>"33724","Window Regulator"=>"33724",
+    "Back Glass Regulator (Electric)"=>"33724","Back Glass Regulator (Manual)"=>"33724",
+    // Lighting + mirrors
+    "Headlight"=>"33614","Tail Light"=>"33710","Taillight"=>"33710",
+    "Mirror (Side View)"=>"33713",
+    // Drivetrain + transmission
+    "Transmission (Auto)"=>"33692","Transmission (Manual)"=>"33692",
+    "Transmission Solenoid Pack"=>"33692","Transmission Valve Body"=>"33692",
+    "Torque Converter"=>"33692","Drive Shaft"=>"33692",
+    "CV Axle Shaft"=>"33692","Axle Shaft"=>"33692",
+    "Axle Assembly Front"=>"33692","Axle Assembly Rear"=>"33692",
+    "Axle Housing"=>"33692","Differential"=>"33692",
+    "Transfer Case"=>"33692","Transfer Case Motor"=>"33692",
+    "Carrier Assembly"=>"33692","Ring and Pinion Gear"=>"33692",
+    // Suspension + steering + brakes
+    "Control Arm Lower"=>"33586","Control Arm Upper"=>"33586",
+    "Strut Assembly"=>"33586","Strut (Air)"=>"33586",
+    "Shock Absorber"=>"33586","Stabilizer Bar"=>"33586",
+    "Spindle/Knuckle"=>"33586","Hub Assembly"=>"33586",
+    "Leaf Spring"=>"33586","Suspension Crossmember"=>"33586",
+    "Independent Rear Suspension"=>"33586",
+    "Steering Column"=>"33571","Steering Rack"=>"33571",
+    "Power Steering Pump"=>"33571","Electric Power Steering Pump"=>"33571",
+    "Clock Spring"=>"33571",
+    "Brake Caliper"=>"33561","Brake Rotor"=>"33561","Brake Rotor w/ Hub"=>"33561",
+    "Power Brake Booster"=>"33561","ABS Module"=>"33561",
+    // Interior + audio
+    "Seat (Front)"=>"6760","Seat (Rear)"=>"6760","Seat (Third Row)"=>"6760",
+    "Center Console"=>"6753","Instrument Cluster"=>"6755",
+    "GPS / Navigation Screen"=>"6755","Radio with Display"=>"6755",
+    "Radio without Display"=>"6755","Radio / Head Unit"=>"6755",
+    "Amplifier"=>"6755",
+    // Wheels + wiring
+    "Wheel (Aluminum)"=>"33567","Wheel (Steel)"=>"33567","Wheel / Rim"=>"33567",
+    "Wiring Harness (Body)"=>"33580","Wiring Harness (Dash)"=>"33580",
+    "Wiring Harness (Engine)"=>"33580",
+];
+
 // Fuzzy match: find best LKQ price for a part name
 function findLKQPrice($name, $lkq) {
     // Exact match first
@@ -296,7 +371,8 @@ if ($resp && isset($resp['content'])) {
                                         'Model' => $modelWords[0],
                                     ];
                                     $aiAvg = isset($part['ebayAvg']) ? (float)$part['ebayAvg'] : 0;
-                                    $ebay  = ebaySearchMedian($cleanPart, $compat);
+                                    $catId = isset($PART_CATEGORIES[$part['name']]) ? $PART_CATEGORIES[$part['name']] : '6030';
+                                    $ebay  = ebaySearchMedian($cleanPart, $compat, $catId);
                                     if ($ebay) {
                                         if ($aiAvg < 1 || $ebay['avg'] >= $aiAvg * 0.4) {
                                             $part['ebayAvg'] = $ebay['avg'];
