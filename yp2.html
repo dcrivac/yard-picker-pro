@@ -294,7 +294,7 @@ var LKQ={
 };
 var LAB={"A/C Compressor":2.0,"A/C Condenser":1.5,"A/C Evaporator":3.0,"ABS Module":1.0,"Air Flow Meter":0.3,"Airbag Sensor":0.5,"Alternator":1.0,"Amplifier":0.8,"Axle Assembly Front":3.0,"Axle Assembly Rear":3.0,"Axle Shaft":1.2,"Back Glass Regulator (Electric)":1.0,"Battery":0.3,"Battery (Hybrid)":1.5,"Brake Caliper":0.5,"Brake Rotor":0.3,"Bumper Cover Front":0.5,"Bumper Cover Rear":0.5,"CV Axle Shaft":1.2,"Camshaft":6.0,"Carburetor":1.5,"Carrier Assembly":3.0,"Center Console":0.5,"Center Pillar":2.0,"Chassis Control Module":0.8,"Clock Spring":0.8,"Coil Pack":0.5,"Control Arm Lower":1.0,"Control Arm Upper":1.0,"Crankshaft":8.0,"Cylinder Head":6.0,"Dash Panel":3.0,"DC Converter (Hybrid)":1.5,"Decklid/Tailgate":0.5,"Differential":3.0,"Distributor":0.5,"Door Assembly Back":1.0,"Door Front":1.0,"Door Rear":1.0,"Drive Shaft":1.5,"ECU / PCM":0.8,"Electric Power Steering Pump":1.5,"Engine (Long Block)":8.0,"Exhaust Manifold":1.5,"Fan Clutch":0.8,"Fender":0.8,"Flywheel":2.0,"Front Bumper (Steel)":0.5,"Fuel Pump":1.5,"Fuel Pump (Direct Injection)":1.5,"Fuel Tank":1.0,"Fuse Box":0.5,"GPS / Navigation Screen":0.5,"Harmonic Balancer":1.0,"Headlight":0.5,"Heater Core":3.0,"Hood":0.5,"Hub Assembly":0.8,"Independent Rear Suspension":4.0,"Instrument Cluster":1.0,"Intake Manifold":2.0,"Intercooler":1.5,"Leaf Spring":1.0,"Mirror (Side View)":0.5,"Oil Pump":2.0,"Power Brake Booster":1.0,"Power Steering Pump":1.5,"Quarter Panel":2.0,"Radiator":1.5,"Radiator Core Support":2.0,"Radiator/Condenser Fan (Dual)":1.0,"Radio with Display":0.8,"Rear Bumper (Steel)":0.5,"Ring and Pinion Gear":3.0,"Roof":3.0,"Seat (Front)":0.5,"Seat (Rear)":0.5,"Seat (Third Row)":0.8,"Shock Absorber":0.5,"Sliding Door Motor":1.0,"Spindle/Knuckle":1.5,"Stabilizer Bar":0.8,"Starter Motor":1.2,"Steering Column":1.5,"Steering Rack":3.0,"Strut Assembly":1.2,"Strut (Air)":1.5,"Suspension Crossmember":2.0,"Tail Light":0.3,"Temperature Control":0.5,"Throttle Body":0.8,"Torque Converter":3.0,"Transfer Case":4.0,"Transfer Case Motor":1.0,"Transmission (Auto)":5.0,"Transmission (Manual)":4.5,"Transmission Solenoid Pack":1.0,"Transmission Valve Body":2.0,"Turbocharger":2.5,"Water Pump":1.8,"Wheel (Aluminum)":0.2,"Wheel (Steel)":0.2,"Window Regulator Front (Electric)":1.0,"Window Regulator Rear (Electric)":1.0,"Wiring Harness (Body)":2.0,"Wiring Harness (Dash)":3.0,"Wiring Harness (Engine)":2.0};
 var EFEE=0.1325,ESHIP=25;
-var vehicles=[],results=[],offset=0,imgB64=null,imgMime='image/jpeg';
+var vehicles=[],results=[],offset=0,imgB64=null,imgMime='image/jpeg',currentSlug='';
 var fmt=function(n){return'$'+Math.round(n).toLocaleString();};
 var fmtD=function(n){return'$'+Number(n).toFixed(2);};
 
@@ -379,7 +379,7 @@ function updateAnalyzeBtn(){
 // ── API ────────────────────────────────────────────────────────
 function api(body,cb){
   var x=new XMLHttpRequest();
-  x.open('POST','https://crivac.com/api.php?_cb='+Date.now(),true);
+  x.open('POST','https://crivac.com/api.php?slug='+encodeURIComponent(currentSlug),true);
   x.setRequestHeader('Content-Type','application/json');
   x.timeout=120000;
   x.ontimeout=function(){cb('Timed out. Try again.');};
@@ -408,6 +408,7 @@ document.getElementById('bFetch').onclick=function(){
   var slug = '';
   var m = url.match(/\/inventory\/([^/?#]+)/);
   if (m) slug = m[1];
+  currentSlug = slug;
   
   var btn=this; btn.disabled=true;
   clrLog(); S('ld','Fetching inventory...');
