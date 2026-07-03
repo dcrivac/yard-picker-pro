@@ -631,7 +631,8 @@ function renderResults(rate){
     h+='<div class="parts'+(rank===0?' open':'')+'" id="'+id+'">';
     car.parts.forEach(function(p){
       var nc=p.netProfit>=50?'#2e7d32':p.netProfit>=0?'#888':'#c62828';
-      var eu=epn('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+p.name)+'&LH_Sold=1&LH_Complete=1');
+      var pq=p.name.replace(/\([^)]*\)/g,'').replace(/\//g,' ').replace(/\s+/g,' ').trim();
+      var eu=epn('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+pq)+'&LH_Sold=1&LH_Complete=1');
       h+='<div class="prow">';
       h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right;color:#aaa">'+fmtD(p.ebayAvg)+' eBay</span></div>';
       if(p.reason)h+='<div class="pr">'+p.reason+'</div>';
@@ -645,7 +646,7 @@ function renderResults(rate){
       var shipLbl=p.shippingSource==='live'?'<span style="font-size:9px;color:#2e7d32">(live)</span>':'<span style="font-size:9px;color:#333">(est.)</span>';
       h+='<div><span class="k">Shipping '+shipLbl+'</span><span class="v vm2">–'+fmtD(p.shipping)+'</span></div>';
       h+='<div style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:6px"><span class="k" style="color:#aaa;font-weight:700">NET PROFIT</span><span class="v vtot" style="color:'+nc+'">'+fmtD(p.netProfit)+'</span></div>';
-      var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+p.name+' '+car.year+' '+car.make+' '+car.model);
+      var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+pq+' '+car.year+' '+car.make+' '+car.model);
       h+='</div><div style="display:flex;border-top:2px solid #f0f0f0">';
       h+='<a href="'+eu+'" target="_blank" onclick="if(window.umami)umami.track(\'ebay_link_clicked\')" class="eb" style="flex:1;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
       h+='<a href="'+yt+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #f0f0f0;text-align:center;margin:0;padding:8px 10px">🔧 Remove →</a>';
