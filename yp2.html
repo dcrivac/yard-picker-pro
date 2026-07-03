@@ -86,8 +86,26 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
 <!-- AUTH BAR -->
 <div id="authbar" style="display:flex;justify-content:flex-end;align-items:center;gap:10px;font-size:12px;margin-bottom:14px;min-height:20px">
   <span id="authWho" style="color:#888"></span>
+  <a id="authBuy" href="#" onclick="return false" style="color:#2e7d32;text-decoration:none;font-weight:700;display:none">+ Buy credits</a>
   <a id="authLink" href="#" style="color:#ff6b00;text-decoration:none;font-weight:700;display:none">Sign in</a>
   <a id="authOut" href="#" style="color:#888;text-decoration:none;display:none">Sign out</a>
+</div>
+
+<!-- BUY CREDITS MODAL -->
+<div id="buyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;max-width:340px;width:100%;padding:22px">
+    <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Buy credits</div>
+    <div style="font-size:11px;color:#888;margin-bottom:16px">1 credit = 1 analysis batch (up to 5 vehicles, 10 parts each).</div>
+    <a href="https://crivac.com/checkout.php?pack=small" style="display:block;background:#1a1000;border:1px solid #ff6b00;border-radius:6px;padding:14px;margin-bottom:10px;text-decoration:none">
+      <div style="color:#fff;font-weight:700;font-size:14px">30 analyses — $5</div>
+      <div style="color:#888;font-size:11px">17¢ each</div>
+    </a>
+    <a href="https://crivac.com/checkout.php?pack=large" style="display:block;background:#1a1000;border:1px solid #ff6b00;border-radius:6px;padding:14px;margin-bottom:10px;text-decoration:none">
+      <div style="color:#fff;font-weight:700;font-size:14px">100 analyses — $15</div>
+      <div style="color:#888;font-size:11px">15¢ each · best value</div>
+    </a>
+    <div style="text-align:center;margin-top:6px"><a id="buyClose" href="#" style="color:#555;font-size:11px;text-decoration:none">Cancel</a></div>
+  </div>
 </div>
 
 <!-- AUTH MODAL -->
@@ -823,7 +841,7 @@ function draftEbay(item) {
   document.body.appendChild(modal);
 }
 
-// ── AUTH (Phase 2a: login only, nothing gated yet) ────────────────────────
+// ── AUTH ───────────────────────────────────────────────────────
 var authUser=null, authMode='login';
 function authGet(id){return document.getElementById(id);}
 function renderAuth(){
@@ -831,10 +849,12 @@ function renderAuth(){
     authGet('authWho').textContent=authUser.email+' · '+authUser.credits+' credits';
     authGet('authLink').style.display='none';
     authGet('authOut').style.display='inline';
+    authGet('authBuy').style.display='inline';
   }else{
     authGet('authWho').textContent='';
     authGet('authLink').style.display='inline';
     authGet('authOut').style.display='none';
+    authGet('authBuy').style.display='none';
   }
 }
 function checkAuth(){
@@ -884,7 +904,25 @@ authGet('authClose').onclick=function(e){e.preventDefault();closeAuth();};
 authGet('authSubmit').onclick=submitAuth;
 authGet('authToggle').onclick=function(e){e.preventDefault();openAuth(authMode==='login'?'register':'login');};
 authGet('authPass').onkeydown=function(e){if(e.key==='Enter')submitAuth();};
+authGet('authBuy').onclick=function(e){e.preventDefault();authGet('buyModal').style.display='flex';};
+authGet('buyClose').onclick=function(e){e.preventDefault();authGet('buyModal').style.display='none';};
 checkAuth();
+
+// Post-checkout landing: refresh credit count, show a toast, clean the URL.
+(function(){
+  var qs=new URLSearchParams(location.search), status=qs.get('checkout');
+  if(status==='success'){
+    S('ok','✅ Payment received — credits added to your account.');
+    var recheck=setInterval(function(){
+      checkAuth();
+      setTimeout(function(){if(authUser)clearInterval(recheck);},400);
+    },1500);
+    setTimeout(function(){clearInterval(recheck);},9000);
+  }else if(status==='cancelled'){
+    S('er','Checkout cancelled. No charge was made.');
+  }
+  if(status){history.replaceState(null,'',location.pathname);}
+})();
 
 </script>
 
