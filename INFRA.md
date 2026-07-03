@@ -90,20 +90,46 @@ https://crivac.com/yp2.html.** No SiteGround proxy ticket required.
   (numeric location id, not slug), with header `x-requested-with: XMLHttpRequest`
   and a `Referer` of the prices page. Non-primo tier matches our LKQ list.
 
+## MySQL + Stripe setup (Phase 2/3)
+
+Provisioning steps, condensed (full walkthrough was done interactively; this is the reference version):
+
+1. **SiteGround Site Tools → MySQL** → create a database and a user, add the user to the database with all privileges. SiteGround prefixes both names (e.g. `dbABC123_yardpicker`, `uABC123_yp`) — always copy the *exact* full name from the dashboard. A common mistake here is leaving placeholder text (like `dbxxxxx_yardpicker` from an example) in `.env.php` instead of the real generated names — this produces a `1045 Access denied` PDO error that looks like a wrong password but is actually a wrong/placeholder username.
+2. **phpMyAdmin** (linked from the same MySQL page) → select the new database → SQL tab → paste `schema.sql` → Go.
+3. Add `DB_HOST` (`localhost` on SiteGround), `DB_NAME`, `DB_USER`, `DB_PASS` to `.env.php`.
+4. Verify from SSH before trusting the app UI:
+   ```bash
+   cd ~/www/crivac.com/public_html
+   php -r 'require ".env.php"; $p=new PDO("mysql:host=".(getenv("DB_HOST")?:"localhost").";dbname=".getenv("DB_NAME"), getenv("DB_USER"), getenv("DB_PASS")); print_r($p->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN));'
+   ```
+   Expect `[users, credit_events]`. Empty array means the schema wasn't run; a PDOException means the credentials are wrong.
+5. **Stripe**: dashboard → Developers → API keys → copy the test-mode secret key into `.env.php` as `STRIPE_SECRET_KEY`. Then Developers → Webhooks → Add endpoint → `https://crivac.com/stripe-webhook.php`, event `checkout.session.completed` → copy the signing secret into `.env.php` as `STRIPE_WEBHOOK_SECRET`.
+6. Test with Stripe's test card `4242 4242 4242 4242`, any future expiry, any CVC.
+
+Going live is a key swap only: `sk_test_...` → `sk_live_...`, plus a **new** webhook endpoint created in Stripe's live mode (test-mode and live-mode webhooks are separate) with its own signing secret. No code changes.
+
 ## Current production state (checkpoint)
 
-Working and verified live (via yp-app.html):
+Working and verified live on the canonical `yp2.html`:
 - Row numbers extracted from PYP inventory
 - 10 parts per vehicle
-- Refreshed LKQ prices (Chula Vista non-primo)
-- Live eBay median pricing with per-listing shipping (where category + listings allow)
+- Multi-yard live PYP pricing — every yard, not just Chula Vista (PR #41; the price refresh below is now superseded by this)
+- Live eBay median pricing (upper-half median, category-filtered, self-healing fallback) with per-listing shipping
 - Security hardening, rate limits, cost ceiling, Umami analytics, Sentry, ToS/Privacy
+- **Accounts**: email/password auth, MySQL-backed (PR #43)
+- **Credits**: 5 free analyses/month, then paid credits, spent per analysis (PR #44)
+- **Payments**: Stripe Checkout credit packs + webhook, test-mode verified end-to-end (PR #45)
+- **Revenue**: eBay Partner Network affiliate links, campaign active (PR #42)
 
 Outstanding:
-- [ ] Tune wrong eBay category IDs (transmission and others showing AI-est; broad-category fallback covers them for now)
-- [ ] `LAUNCH.md` Phase-1 table is out of date vs what actually shipped
+- [ ] Tune wrong eBay category IDs (a handful of parts still show AI-est; the broad-category fallback from PR #38 covers them functionally, this is pure accuracy polish)
+- [ ] Password reset flow — needs a transactional email sender (Resend/Postmark), not yet set up. A lost password is currently unrecoverable.
+- [ ] LLC formation before Stripe live-mode cutover
+- [ ] `LAUNCH.md` compliance section needs a fresh pass now that accounts + payments exist (privacy policy language predates them)
 
 Resolved:
 - [x] `deploy.yml` now targets the real docroot — auto-deploy works (PR #38)
 - [x] Edge-proxy stale content — fixed by the docroot correction, no ticket needed
 - [x] `yp-*` workaround files removed; app back on canonical `yp2.html`
+- [x] eBay "sold" / "how to remove" links returning 0 results for parenthetical part names (PR #43, bundled with the accounts foundation)
+- [x] Profit-tier colors recolored to the intuitive green/grey/red scheme (PR #40)
