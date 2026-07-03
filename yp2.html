@@ -83,6 +83,30 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
 <h1>YARD PICKER <span>PRO</span></h1>
 <div class="sub" id="ver">Initializing...</div>
 
+<!-- AUTH BAR -->
+<div id="authbar" style="display:flex;justify-content:flex-end;align-items:center;gap:10px;font-size:12px;margin-bottom:14px;min-height:20px">
+  <span id="authWho" style="color:#888"></span>
+  <a id="authLink" href="#" style="color:#ff6b00;text-decoration:none;font-weight:700;display:none">Sign in</a>
+  <a id="authOut" href="#" style="color:#888;text-decoration:none;display:none">Sign out</a>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="authModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;max-width:340px;width:100%;padding:22px">
+    <div id="authTitle" style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Sign in</div>
+    <div style="font-size:11px;color:#888;margin-bottom:14px">Save your work and get free monthly analyses.</div>
+    <input id="authEmail" type="email" placeholder="you@email.com" autocomplete="email" style="width:100%;margin-bottom:8px">
+    <input id="authPass" type="password" placeholder="password (8+ chars)" autocomplete="current-password" style="width:100%;margin-bottom:8px">
+    <div id="authErr" style="color:#c62828;font-size:11px;min-height:14px;margin-bottom:8px"></div>
+    <button id="authSubmit" class="btn g" style="width:100%;font-size:14px;padding:14px;margin-bottom:10px">Sign in</button>
+    <div style="text-align:center;font-size:11px;color:#888">
+      <span id="authToggleTxt">New here?</span>
+      <a id="authToggle" href="#" style="color:#ff6b00;text-decoration:none;font-weight:700">Create an account</a>
+    </div>
+    <div style="text-align:center;margin-top:10px"><a id="authClose" href="#" style="color:#555;font-size:11px;text-decoration:none">Cancel</a></div>
+  </div>
+</div>
+
 <!-- STEP 1 -->
 
 <div class="section">
@@ -607,7 +631,8 @@ function renderResults(rate){
     h+='<div class="parts'+(rank===0?' open':'')+'" id="'+id+'">';
     car.parts.forEach(function(p){
       var nc=p.netProfit>=50?'#2e7d32':p.netProfit>=0?'#888':'#c62828';
-      var eu=epn('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+p.name)+'&LH_Sold=1&LH_Complete=1');
+      var pq=p.name.replace(/\([^)]*\)/g,'').replace(/\//g,' ').replace(/\s+/g,' ').trim();
+      var eu=epn('https://www.ebay.com/sch/i.html?_nkw='+encodeURIComponent(car.year+' '+car.make+' '+car.model+' '+pq)+'&LH_Sold=1&LH_Complete=1');
       h+='<div class="prow">';
       h+='<div class="pn" style="color:'+nc+'">'+p.name+' <span style="font-size:13px;font-weight:800;float:right;color:#aaa">'+fmtD(p.ebayAvg)+' eBay</span></div>';
       if(p.reason)h+='<div class="pr">'+p.reason+'</div>';
@@ -621,7 +646,7 @@ function renderResults(rate){
       var shipLbl=p.shippingSource==='live'?'<span style="font-size:9px;color:#2e7d32">(live)</span>':'<span style="font-size:9px;color:#333">(est.)</span>';
       h+='<div><span class="k">Shipping '+shipLbl+'</span><span class="v vm2">–'+fmtD(p.shipping)+'</span></div>';
       h+='<div style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:6px"><span class="k" style="color:#aaa;font-weight:700">NET PROFIT</span><span class="v vtot" style="color:'+nc+'">'+fmtD(p.netProfit)+'</span></div>';
-      var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+p.name+' '+car.year+' '+car.make+' '+car.model);
+      var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+pq+' '+car.year+' '+car.make+' '+car.model);
       h+='</div><div style="display:flex;border-top:2px solid #f0f0f0">';
       h+='<a href="'+eu+'" target="_blank" onclick="if(window.umami)umami.track(\'ebay_link_clicked\')" class="eb" style="flex:1;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
       h+='<a href="'+yt+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #f0f0f0;text-align:center;margin:0;padding:8px 10px">🔧 Remove →</a>';
@@ -789,6 +814,69 @@ function draftEbay(item) {
   ].join('');
   document.body.appendChild(modal);
 }
+
+// ── AUTH (Phase 2a: login only, nothing gated yet) ────────────────────────
+var authUser=null, authMode='login';
+function authGet(id){return document.getElementById(id);}
+function renderAuth(){
+  if(authUser){
+    authGet('authWho').textContent=authUser.email+' · '+authUser.credits+' credits';
+    authGet('authLink').style.display='none';
+    authGet('authOut').style.display='inline';
+  }else{
+    authGet('authWho').textContent='';
+    authGet('authLink').style.display='inline';
+    authGet('authOut').style.display='none';
+  }
+}
+function checkAuth(){
+  var x=new XMLHttpRequest();
+  x.open('GET','https://crivac.com/auth.php',true);
+  x.onload=function(){try{var d=JSON.parse(x.responseText);authUser=d.user||null;}catch(e){authUser=null;}renderAuth();};
+  x.onerror=function(){renderAuth();};
+  x.send();
+}
+function openAuth(mode){
+  authMode=mode||'login';
+  authGet('authErr').textContent='';
+  authGet('authTitle').textContent=authMode==='login'?'Sign in':'Create an account';
+  authGet('authSubmit').textContent=authMode==='login'?'Sign in':'Create account';
+  authGet('authToggleTxt').textContent=authMode==='login'?'New here?':'Have an account?';
+  authGet('authToggle').textContent=authMode==='login'?'Create an account':'Sign in';
+  authGet('authModal').style.display='flex';
+}
+function closeAuth(){authGet('authModal').style.display='none';}
+function submitAuth(){
+  var email=authGet('authEmail').value.trim(), pass=authGet('authPass').value;
+  authGet('authErr').textContent='';
+  var btn=authGet('authSubmit'); btn.disabled=true;
+  var x=new XMLHttpRequest();
+  x.open('POST','https://crivac.com/auth.php',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.onload=function(){
+    btn.disabled=false;
+    var d;try{d=JSON.parse(x.responseText);}catch(e){authGet('authErr').textContent='Something went wrong.';return;}
+    if(d.error){authGet('authErr').textContent=d.error;return;}
+    authUser=d.user||null; renderAuth(); closeAuth();
+    if(window.umami)umami.track(authMode==='login'?'login':'signup');
+  };
+  x.onerror=function(){btn.disabled=false;authGet('authErr').textContent='Network error.';};
+  x.send(JSON.stringify({action:authMode,email:email,password:pass}));
+}
+function logout(){
+  var x=new XMLHttpRequest();
+  x.open('POST','https://crivac.com/auth.php',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.onload=function(){authUser=null;renderAuth();};
+  x.send(JSON.stringify({action:'logout'}));
+}
+authGet('authLink').onclick=function(e){e.preventDefault();openAuth('login');};
+authGet('authOut').onclick=function(e){e.preventDefault();logout();};
+authGet('authClose').onclick=function(e){e.preventDefault();closeAuth();};
+authGet('authSubmit').onclick=submitAuth;
+authGet('authToggle').onclick=function(e){e.preventDefault();openAuth(authMode==='login'?'register':'login');};
+authGet('authPass').onkeydown=function(e){if(e.key==='Enter')submitAuth();};
+checkAuth();
 
 </script>
 
