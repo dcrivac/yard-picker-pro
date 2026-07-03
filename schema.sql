@@ -24,3 +24,17 @@ CREATE TABLE IF NOT EXISTS credit_events (
     UNIQUE KEY uniq_ref_reason (ref, reason),             -- guards against double-crediting on webhook retries
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Password reset tokens. Raw token is emailed to the user and never stored;
+-- only its SHA-256 hash lives here, same principle as password hashing.
+CREATE TABLE IF NOT EXISTS password_resets (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT NOT NULL,
+    token_hash CHAR(64) NOT NULL,                       -- sha256(raw token), hex
+    expires_at TIMESTAMP NOT NULL,
+    used_at    TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX (user_id),
+    INDEX (token_hash),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
