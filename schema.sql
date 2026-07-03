@@ -21,5 +21,6 @@ CREATE TABLE IF NOT EXISTS credit_events (
     ref        VARCHAR(128) NULL,                      -- e.g. Stripe session id
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX (user_id),
+    UNIQUE KEY uniq_ref_reason (ref, reason),             -- guards against double-crediting on webhook retries
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
