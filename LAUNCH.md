@@ -8,23 +8,26 @@ AI-powered junkyard profitability analyzer. User pastes a Pick Your Part (pyp.co
 
 Live at **https://crivac.com/yp2.html**. Source at **https://github.com/dcrivac/yard-picker-pro** (public).
 
-Originally built for personal use by David + one friend. Now being prepared for a public launch as a paid or freemium SaaS.
+Originally built for personal use by David + one friend. **Now a monetized, multi-yard, publicly launched product** with accounts and paid credit packs.
 
 ## Production status (as of this writing)
 
 | Area | Status |
 |---|---|
-| App | Live, fully functional |
-| Auto-deploy | Working — every merge to `main` ships within ~30s |
+| App | Live, fully functional, works at any PYP yard location |
+| Auto-deploy | Working — merges to `main` deploy to the real docroot in ~30s (see `INFRA.md` for the docroot history) |
 | Secrets | All in `public_html/.env.php` on SiteGround (gitignored) |
-| eBay integration | Live data overrides Claude's price guesses |
-| Security | Hardened (env-var secrets, CORS allowlist, SSL verify, rate limit, generic errors) |
+| eBay integration | Live median pricing + per-listing shipping, per-part category filtering with self-healing fallback |
+| PYP pricing | Live per-yard prices fetched from PYP's own API, not hardcoded |
+| Security | Hardened (env-var secrets, CORS allowlist, SSL verify, rate limit, generic errors, brute-force-limited auth) |
 | Repo visibility | Public |
-| Monitoring | None yet |
-| Analytics | None yet |
-| Auth / accounts | None yet |
-| Payments | None yet |
-| ToS / Privacy Policy | None yet |
+| Monitoring | Sentry (client-side JS errors on `yp2.html` + `index.html`) |
+| Analytics | Umami Cloud (page views + funnel events) |
+| Auth / accounts | **Live** — email/password, MySQL-backed, bcrypt hashed |
+| Payments | **Live** — Stripe Checkout, 2 credit packs, webhook-driven crediting (test mode; live-mode cutover is a key swap, no code change) |
+| Credits / metering | **Live** — 5 free analyses/month per account, then paid credits; every `api.php` analysis call spends 1 |
+| Revenue | **Live** — eBay Partner Network affiliate links (campaign active) + credit pack sales |
+| ToS / Privacy Policy | Live, linked from both footers (see Phase 1 below) |
 
 ## Recently shipped (this session)
 
@@ -75,26 +78,60 @@ Followed by manual user action: **repo visibility flipped to public** so HTTPS `
 
 **End result**: every PR merge now auto-deploys to SiteGround in ~30s. No more File Manager uploads except for `.env.php` edits.
 
+### Phase 1 completion — PRs #16–22
+
+Umami analytics + custom funnel events, Terms of Service + Privacy Policy pages, a `mailto:` feedback link, Sentry error reporting, a daily Anthropic cost ceiling ($5/day, `DAILY_COST_CEILING_USD`), and a per-IP daily request cap (50/day on top of the existing 10/min). All the "survive being shared publicly" items from Phase 1 below.
+
+### The docroot bug hunt — PRs #23–39
+
+The single biggest time sink of the project. Short version: **every deploy for weeks landed in the wrong folder.** `deploy.yml` ran `git pull` in `~/public_html`, which is a symlink to a decoy directory the live site never served from — the real docroot is `~/www/crivac.com/public_html`. Every "the eBay prices still look stale" or "the site is caching something" investigation during this window chased SiteGround's edge proxy and OpCache, both innocent; the actual bug was one `cd` in a YAML file. Full postmortem, the decoy-directory map, and the diagnostic commands live in **`INFRA.md`** — read it before touching deploy or caching again.
+
+Once the docroot was fixed (PR #38), the *real* remaining issues surfaced fast and got fixed the same day:
+- eBay's `compatibility_filter` (Year/Make/Model matching) requires a `category_ids` param or it 400s. Added a ~80-entry per-part category map plus a self-healing fallback to the broad "Car & Truck Parts" category when a narrow one returns nothing usable (PR #37, #38).
+- Replaced simple-median eBay pricing with an upper-half median to resist "accessory bleed" (cheap brackets/connectors dragging the price down) — PR #29.
+- Refreshed the entire hardcoded LKQ price list from PYP's live pricing API — PR #32. (Superseded by PR #41, see below — prices are no longer hardcoded at all.)
+- Fixed PYP row-number extraction (`scrape.php` was anchoring on the wrong HTML element) — PR #33.
+
+### Multi-yard support — PR #41
+
+The app was hardcoded to Chula Vista pricing. Now `api.php` fetches the visited yard's live price list from PYP's own internal pricing API (keyed by the numeric locationCode in the inventory slug), caches it 24h, and overrides the fallback price table. Works at any PYP location, and prices never go stale again — no more manual refreshes like PR #32's.
+
+### UX + bug fixes — PRs #40, #43 (partial)
+
+- Per-part profit colors recolored to the intuitive scheme: green ≥ $50, grey $0–49, red negative (was orange/green, which read backwards).
+- Fixed the "eBay sold" and "how to remove" outbound links: they searched the literal part name including parenthetical qualifiers (`Engine (Long Block)`), which almost never appears in real listing titles and returned 0 results. Now stripped before building the search query.
+
+### Revenue: eBay Partner Network — PR #42
+
+Every "eBay sold →" link now carries an EPN affiliate tag (campaign `5339163850`, active). Zero change to recommendations — same links, just tagged. FTC disclosure auto-appears in the results footer. This was revenue stream #1, shippable with zero new infrastructure since the app already sent this traffic to eBay for free.
+
+### Phase 2: accounts, credits, payments — PRs #43, #44, #45
+
+The big one. Three-phase build, each independently shippable:
+
+- **2a (accounts, PR #43)**: MySQL database (`schema.sql`: `users` + `credit_events` ledger), email/password auth (`auth.php`, bcrypt via `password_hash`, rate-limited, session-cookie based), login/register modal in `yp2.html`. Shipped as a no-op until the DB was provisioned — anonymous use kept working throughout.
+- **2b (metering, PR #44)**: 5 free analyses/month per account (config: `FREE_MONTHLY`), then spends purchased credits. `api.php` checks credits before calling Anthropic and deducts 1 only after a successful response (failed calls aren't charged). `X-Credits-Remaining` response header keeps the UI in sync.
+- **2c (payments, PR #45)**: Stripe Checkout for two credit packs ($5 → 30 analyses, $15 → 100 analyses), plain REST calls via curl (no SDK/composer dependency — consistent with how the app talks to eBay). `stripe-webhook.php` verifies the `Stripe-Signature` header manually and credits the account on `checkout.session.completed`, idempotent via a `UNIQUE(ref, reason)` constraint so Stripe's webhook retries can't double-credit.
+
+**Verified working end-to-end in test mode**: register → free analyses → buy credits → Stripe checkout → webhook fires → balance updates → out-of-credits gate re-engages correctly. Flipping to live payments is a key swap (`sk_test_...`/`whsec_...` → live equivalents + a new live-mode webhook endpoint), no code changes needed.
+
 ## Architecture today
 
 ```
-┌─────────────┐                                 ┌──────────────────┐
-│  Browser    │  POST /api.php (Anthropic call) │  api.php         │
-│  yp2.html   │ ──────────────────────────────► │  (server-side    │
-│             │                                 │   key, CORS,     │
-│             │  GET /scrape.php?slug=...       │   rate limit)    │
-│             │ ──────────────────────────────► │                  │
-│             │                                 └─────┬────────────┘
-│             │  GET /ebay.php?q=...                  │
-│             │ ──────────────────────────────► ┌─────▼────────────┐
-│             │                                 │  ebay-prices.php │
-└─────────────┘                                 │  (OAuth + cache) │
-                                                └─────┬────────────┘
-                                                      │
-                                  ┌───────────────────┼───────────────────┐
-                                  ▼                   ▼                   ▼
-                          api.anthropic.com   api.ebay.com/buy    www.pyp.com
-                          (Claude Haiku 4.5)  (Browse search)     (inventory HTML)
+┌─────────────┐  POST /api.php (Anthropic + credit spend) ┌──────────────────┐
+│  Browser    │ ──────────────────────────────────────────►│  api.php         │
+│  yp2.html   │  GET /scrape.php?slug=...                   │  db.php          │
+│             │ ──────────────────────────────────────────►│  ebay-prices.php │
+│             │  POST /auth.php {register,login,logout}     └─────┬───┬────────┘
+│             │ ──────────────────────────────────────────►       │   │
+│             │  GET /checkout.php?pack=...                       │   │
+│             │ ──────────────────────────────────────────► ┌─────▼┐ ┌▼─────────┐
+└─────────────┘                                              │MySQL │ │eBay/PYP  │
+       ▲                                                     │(users│ │APIs      │
+       │  redirect to Stripe hosted checkout                 │credit│ └──────────┘
+       └──────────────────────────────────────────────────── │events│
+                                                               └──────┘
+Stripe ──POST checkout.session.completed──► stripe-webhook.php ──► credits user, MySQL
 ```
 
 Files in `public_html/`:
@@ -103,66 +140,59 @@ Files in `public_html/`:
 |---|---|
 | `yp2.html` | Full single-file web app (HTML+CSS+JS in one file for Safari compat) |
 | `index.html` | Landing page |
-| `api.php` | Anthropic API proxy + LKQ price injection + eBay price injection |
+| `api.php` | Anthropic API proxy + LKQ/eBay price injection + credit check & spend |
 | `scrape.php` | pyp.com inventory scraper (curl with iPhone UA) |
 | `ebay.php` | Standalone eBay Browse API lookup endpoint |
-| `ebay-prices.php` | Helper: `ebayGetToken()` + `ebaySearchMedian()` |
+| `ebay-prices.php` | Helper: `ebayGetToken()` + `ebaySearchMedian()` (category-aware, upper-half median) |
 | `ebay-deletion.php` | eBay Marketplace Account Deletion webhook |
+| `prices.php` | One-off / on-demand PYP yard price list fetcher (used by `api.php`'s multi-yard lookup) |
+| `db.php` | Shared MySQL (PDO) connection + session/auth helpers (`currentUser()`, `creditStatus()`) |
+| `auth.php` | Register / login / logout / current-session endpoint |
+| `checkout.php` | Creates a Stripe Checkout Session for a credit pack, redirects to Stripe |
+| `stripe-webhook.php` | Verifies Stripe webhook signature, credits the account on paid checkout |
+| `schema.sql` | MySQL schema (`users`, `credit_events`) — run once in phpMyAdmin |
 | `.env.php` | Server-side secrets (gitignored, **not in repo**) |
 | `.htaccess` | Cache control + headers |
 | `.gitignore` | Excludes `.env*` etc. |
 
-`.env.php` on the server holds:
+`.env.php` on the server holds (see `.env.example` for the authoritative, commented list):
 ```php
 <?php
 putenv('ANTHROPIC_API_KEY=sk-ant-...');
 putenv('EBAY_VERIFICATION_TOKEN=...');     // 64-char random string
 putenv('EBAY_CLIENT_ID=YourApp-Name-PRD-...');
 putenv('EBAY_CLIENT_SECRET=PRD-...');
+putenv('DB_HOST=localhost');
+putenv('DB_NAME=dbxxxxxxxx_yardpicker');
+putenv('DB_USER=uxxxxxxxx_yp');
+putenv('DB_PASS=...');
+putenv('STRIPE_SECRET_KEY=sk_test_...');   // sk_live_... once cut over
+putenv('STRIPE_WEBHOOK_SECRET=whsec_...');
 ```
 
 ---
 
 # Forward-looking roadmap
 
-## The single most important decision
+## The monetization decision — RESOLVED
 
-**Who pays for the API calls under public traffic?** Every other choice flows from this one.
+Went with a **hybrid of freemium credits + affiliate revenue**, not a pure subscription:
 
-Right now Crivac's Anthropic + eBay keys are used for every request. With friends-only traffic that costs ~$0/month. With a Reddit post going semi-viral, 5,000 sessions in a day could be a **$75 surprise on the card**, and someone running a script in a loop could 10× that easily.
+- **Free tier**: 5 analyses/month per account (config: `FREE_MONTHLY` in `.env.php`).
+- **Credit packs** (usage-based, not subscription): $5 → 30 analyses, $15 → 100 analyses, via Stripe Checkout. Chosen over a flat monthly subscription because picker usage is bursty (weekend yard trips, not daily) — pay-as-you-go maps better to that pattern than a recurring charge someone forgets about.
+- **eBay Partner Network affiliate links** as a second, independent revenue stream layered on top — zero incremental cost, already-existing traffic.
+- Auth is email/password (not Google/magic-link) — simplest to build and audit, no third-party OAuth dependency. Password reset is deferred (needs a transactional email service — Resend/Postmark free tier — not yet set up).
 
-Three viable models:
+This is genuinely live in production (test-mode Stripe; live-mode cutover is a key swap only).
 
-### A. Bring-your-own-key (BYOK) — pure open-source play
-- User pastes their Anthropic API key into the UI; stored in `localStorage`, sent with each `/api.php` request.
-- Crivac pays nothing per user. Hosting costs only.
-- ~30% expected drop-off at the "go get an API key" step.
-- **Probably not the right audience** — junkyard pickers aren't going to set up an Anthropic console account.
+## Open questions still needing answers
 
-### B. Managed subscription — Crivac absorbs cost + charges users
-- Stripe checkout, $5–10/mo, unlimited analyses (with per-user rate limit).
-- Requires accounts, auth, billing, abuse prevention.
-- Maximum addressable market. Real recurring revenue.
-- Highest upfront engineering cost.
-
-### C. Freemium — best of both
-- Free tier: N analyses/month with Crivac's key (e.g. 5/mo) — gets people hooked.
-- Paid tier: Stripe subscription for unlimited.
-- Optional BYOK escape hatch for power users.
-- Best for launch. Lets people try before paying without burning Crivac on freeloaders.
-
-**Recommendation: Path C (freemium).** But commit to a model before anything below makes sense to build.
-
-## Open questions needing answers
-
-1. **Monetization model**: A / B / C above? (Recommend C.)
-2. **Auth provider**: Google sign-in (lowest friction)? Magic-link email (no third-party dependency)? Both?
-3. **Stripe vs LemonSqueezy** for payments? (LemonSqueezy handles global sales tax; Stripe is more flexible but you handle tax yourself.)
-4. **LLC / business entity**: Do you have one? Required for taking payments under your own name.
-5. **Free-tier cap**: 3 / 5 / 10 sessions per month? Per IP, per email, or per device?
-6. **Pricing**: $5/mo? $10/mo? Pay-per-session ($1 each)?
-7. **Branding**: Stay on `crivac.com/yp2.html`? Buy `yardpickerpro.com` and migrate?
-8. **Mobile**: PWA "Add to Home Screen" at launch, or wait for a native iOS app?
+1. **LLC / business entity**: still needed before this can take *real* money at scale — required for Stripe live mode payouts and clean tax treatment. Not yet formed.
+2. **Live-mode Stripe cutover**: when to flip from test to live keys. No code change, just new keys + a new live-mode webhook endpoint in the Stripe dashboard.
+3. **Password reset flow**: needs a transactional email sender. Free tier of Resend or Postmark, ~30 min to wire up.
+4. **Free-tier cap tuning**: is 5/month the right number once real usage data comes in via Umami/Sentry? Config is a single env var, easy to adjust.
+5. **Branding**: still on `crivac.com/yp2.html`. Buy `yardpickerpro.com` and migrate? Low urgency, doesn't block revenue.
+6. **Mobile**: PWA "Add to Home Screen," or wait for a native app? Still open, still low priority — the mobile *web* experience already works well.
 
 ## Phased roadmap
 
@@ -187,35 +217,31 @@ Goal: app survives being shared publicly without bleeding money.
 - [x] **Feedback channel** — PR #21. `mailto:` link for now; swap to a Tally form URL later if email volume gets noisy.
 - [ ] **Buy a real domain** (e.g. `yardpickerpro.com`) and redirect from `crivac.com/yp2.html`. Manual purchase + DNS step.
 
-### Phase 2 — accounts + auth
+### Phase 2 — accounts + auth — DONE ✓ (PR #43)
 
-Goal: know who your users are.
+- [x] Database — MySQL on SiteGround (`schema.sql`).
+- [x] Auth — email/password, bcrypt, rate-limited, session-cookie based.
+- [ ] Per-user rate limiting (currently still per-IP in `api.php`; the credit system is the real usage cap now, so this is lower priority than it was).
+- [ ] User dashboard: history of past analyses, saved favorites. Not built — currently no analysis history is persisted server-side, only credit balance.
+- [ ] Move tracker data (`localStorage`-based profit tracker in `yp2.html`) to server-side per user. Still client-only.
 
-- [ ] Database. SQLite on SiteGround is simplest; Supabase Postgres if you want a managed option.
-- [ ] Auth: Google sign-in primary, magic-link email backup.
-- [ ] Per-user rate limiting (replaces per-IP).
-- [ ] User dashboard: history of past analyses, saved favorites.
-- [ ] Move tracker data from `localStorage` to server-side per user.
+### Phase 3 — payments — DONE ✓ (PRs #44, #45)
 
-### Phase 3 — payments
-
-Goal: take money.
-
-- [ ] LLC (LegalZoom ~$200, or do it yourself for ~$70 in your state).
-- [ ] Stripe (or LemonSqueezy) integration.
-- [ ] Free tier: N sessions/month for signed-in users.
-- [ ] Paid tier: $X/mo unlimited.
-- [ ] Webhook handlers for subscription lifecycle (created, cancelled, payment failed).
-- [ ] Account-management UI: cancel, change card, download receipts.
-- [ ] eBay attribution per their commercial-use ToS (logo + "Powered by eBay" somewhere).
+- [ ] LLC (LegalZoom ~$200, or do it yourself for ~$70 in your state). **Still needed before going live with real charges.**
+- [x] Stripe integration — Checkout Sessions for one-time credit packs (not a subscription; see monetization decision above).
+- [x] Free tier — 5 analyses/month per signed-in account (`FREE_MONTHLY`).
+- [x] Paid tier — credit packs, no expiry.
+- [x] Webhook handler — `stripe-webhook.php`, verified signature, idempotent crediting.
+- [ ] Account-management UI: view purchase history, download receipts. Not built — Stripe's own customer portal could cover this cheaply if enabled in the Stripe dashboard.
+- [ ] eBay attribution per their commercial-use ToS (logo + "Powered by eBay" somewhere) — not yet added; EPN affiliate disclosure is live, but the branding requirement is separate and worth double-checking against eBay's current developer agreement.
 
 ### Phase 4 — growth
 
 Goal: actually market it.
 
 - [ ] SEO: real metadata, sitemap, blog posts on "how to flip junkyard parts on eBay."
-- [ ] eBay Partner Network: earn % on eBay traffic the app drives.
-- [ ] Referral codes: existing users get free month for each signup.
+- [x] eBay Partner Network — PR #42. Campaign `5339163850` active on every eBay outbound link.
+- [ ] Referral codes: existing users get free credits for each signup.
 - [ ] Reddit posts in r/Justrolledintotheshop, r/MechanicAdvice, r/Flipping.
 - [ ] TikTok demos.
 - [ ] Email list capture from landing page → MailerLite or ConvertKit.
@@ -233,30 +259,34 @@ Goal: hard for competitors to copy.
 
 ## Compliance items
 
-These need actual research before going live, not just engineering:
+These need actual research before real money flows at scale, not just engineering. Now more urgent than when this list was first written, since payments are live:
 
-- **Anthropic ToS**: confirm offering Claude through a proxied SaaS is allowed (generally yes, but re-read).
-- **eBay Developer Agreement**: commercial use rules, branding requirements, attribution, sold-listings restrictions.
-- **PYP / LKQ legal**: scraping `pyp.com` is in a gray zone. Robots.txt currently allows it; their ToS may not. Read it. Consider asking for an official feed.
-- **State sales tax**: where you have nexus, you must collect. Stripe Tax or LemonSqueezy can handle this.
-- **GDPR / CCPA**: privacy policy must cover user data retention and deletion requests.
+- **LLC formation** — the single biggest gap. Taking real payments as an individual (not an entity) is a personal liability and tax-reporting exposure once volume is non-trivial. Do this before flipping Stripe to live mode.
+- **Anthropic ToS**: confirm offering Claude through a proxied, paid SaaS is allowed (generally yes for this scale, but re-read given payments are now involved).
+- **eBay Developer Agreement**: commercial use rules, branding/attribution requirements (see the unchecked Phase 3 item above), sold-listings restrictions. Also re-check EPN's specific program terms now that the campaign is active.
+- **PYP / LKQ legal**: scraping `pyp.com` (both inventory and the pricing API used for multi-yard support) is in a gray zone. Robots.txt currently allows it; their ToS may not. Read it. Consider asking for an official feed, especially now that the app depends on their internal pricing API more heavily.
+- **State sales tax on credit sales**: where you have nexus, you must collect. Stripe Tax can be enabled on the existing Checkout Sessions with minimal code change.
+- **GDPR / CCPA**: privacy policy needs an update pass — it was written pre-accounts and should now describe what's stored for registered users (email, hashed password, credit balance, purchase history) and the deletion process for account data, not just the anonymous-analytics language it currently has.
+- **PCI scope**: none — Stripe Checkout is fully hosted, card data never touches the server. Worth stating explicitly if this ever comes up in a security review.
 
-## Quick wins (low effort, high leverage, do soon regardless of model)
+## Quick wins (low effort, high leverage)
 
-- [ ] **Daily cost ceiling on `api.php`** — ~30 min of work, prevents disaster.
-- [ ] **Add analytics now** so you have baseline metrics before launch.
-- [ ] **Feedback channel** for early users.
-- [ ] **Generate ToS + Privacy Policy** via Termly.io (free, ~15 min).
+- [x] ~~Daily cost ceiling on `api.php`~~ — done, PR #17.
+- [x] ~~Add analytics~~ — done, PR #18 (Umami) + Sentry, PR #22.
+- [x] ~~Feedback channel~~ — done, PR #21.
+- [x] ~~Generate ToS + Privacy Policy~~ — done, PR #19. **Needs a fresh pass now that accounts + payments exist** (see compliance items above).
+- [ ] **Password reset flow** — needs a transactional email sender (Resend/Postmark free tier). Currently a lost password is unrecoverable; support this before real users accumulate.
+- [ ] **Stripe customer portal** — enabling it in the Stripe dashboard gives users self-serve purchase history/receipts with near-zero code.
 
 ## For contributors (your friend reading this)
 
 If you want to jump in:
 
-1. **Read this doc and `CONTEXT.md`** in the repo root. CONTEXT.md has the deep technical details (file purposes, Safari quirks, AI models used, deployment specifics).
-2. **Get the secrets** from David — you'll need `ANTHROPIC_API_KEY`, `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`, `EBAY_VERIFICATION_TOKEN` to run locally.
-3. **Local dev**: clone the repo, `cp .env.example .env.php` with real values, run `php -S localhost:8000` in the repo root, hit `http://localhost:8000/yp2.html`. (`scrape.php` needs to hit a real pyp.com URL.)
-4. **Pick something off Phase 1** to ship first — most things are independent and ~half-day-sized tasks.
-5. **PR flow**: branch from `main`, open PR, merge → live in ~30s automatically.
+1. **Read this doc, `INFRA.md`, and `CONTEXT.md`** in the repo root, in that order. `INFRA.md` especially — it documents the real production docroot, SiteGround's caching quirks, and several bugs that ate real debugging time; skipping it risks re-discovering them the hard way.
+2. **Get the secrets** from David — the full list is `.env.example`. As of Phase 2/3 that's `ANTHROPIC_API_KEY`, `EBAY_CLIENT_ID`/`EBAY_CLIENT_SECRET`/`EBAY_VERIFICATION_TOKEN`, `DB_HOST`/`DB_NAME`/`DB_USER`/`DB_PASS`, and `STRIPE_SECRET_KEY`/`STRIPE_WEBHOOK_SECRET` — noticeably more than the read-only-API days.
+3. **Local dev**: clone the repo, `cp .env.example .env.php` with real values, run `php -S localhost:8000` in the repo root, hit `http://localhost:8000/yp2.html`. (`scrape.php` needs to hit a real pyp.com URL. Auth/credits/checkout need a local or shared MySQL instance and Stripe test-mode keys — ask David for a dev DB or point at a local MySQL with `schema.sql` run against it.)
+4. **Pick something off Phase 4 or the compliance list** to ship first — Phases 1–3 are done. Most remaining items are independent and ~half-day-sized.
+5. **PR flow**: branch from `main`, open PR, merge → live in ~30s automatically, targeting the real docroot (see `INFRA.md`).
 
 Things that are deliberately *not* on the roadmap and shouldn't be added without discussion:
 
