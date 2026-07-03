@@ -69,6 +69,35 @@ function creditStatus($user) {
     return [$free, $paid, $free + $paid];
 }
 
+// Send a transactional email via Resend's REST API (no SDK/composer — plain
+// curl, same pattern as ebay-prices.php and checkout.php). Returns true on
+// success, false on failure (logged, never thrown — callers should treat
+// email as best-effort and not break the calling flow on failure).
+function sendEmail($to, $subject, $html) {
+    $key  = getenv('RESEND_API_KEY') ?: '';
+    $from = getenv('RESEND_FROM') ?: '';
+    if ($key === '' || $from === '') { error_log('[db.php] sendEmail: RESEND_API_KEY/RESEND_FROM not set'); return false; }
+
+    $ch = curl_init('https://api.resend.com/emails');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST           => true,
+        CURLOPT_POSTFIELDS     => json_encode(['from' => $from, 'to' => [$to], 'subject' => $subject, 'html' => $html]),
+        CURLOPT_HTTPHEADER     => ['Authorization: Bearer ' . $key, 'Content-Type: application/json'],
+        CURLOPT_TIMEOUT        => 15,
+        CURLOPT_SSL_VERIFYPEER => true,
+    ]);
+    $resp = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($code < 200 || $code >= 300) {
+        error_log('[db.php] sendEmail failed (HTTP ' . $code . '): ' . substr((string)$resp, 0, 300));
+        return false;
+    }
+    return true;
+}
+
 // Return the current logged-in user row, or null. Cached per request.
 function currentUser() {
     static $cached = null;

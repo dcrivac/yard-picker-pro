@@ -3,10 +3,14 @@
 //
 //   POST auth.php {action:"register", email, password}
 //   POST auth.php {action:"login",    email, password}
+//   POST auth.php {action:"forgot",   email}                  -> emails a reset link
+//   POST auth.php {action:"reset",    token, password}        -> sets new password, logs in
 //   POST auth.php {action:"logout"}
 //   GET  auth.php            -> current session user (or {user:null})
 //
 // Passwords are bcrypt-hashed (password_hash). All queries are prepared.
+// Reset tokens are single-use, expire in 1h, and only their SHA-256 hash is
+// stored (see password_resets in schema.sql) — same principle as passwords.
 
 require_once __DIR__ . '/db.php';
 
@@ -48,7 +52,7 @@ $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
 $rl = sys_get_temp_dir() . '/yp-auth-' . hash('sha256', $ip);
 $now = time(); $hits = [];
 if (is_file($rl)) foreach (explode("\n", trim(@file_get_contents($rl))) as $t) if ($t !== '' && (int)$t > $now - 300) $hits[] = (int)$t;
-if (in_array($action, ['login', 'register'], true)) {
+if (in_array($action, ['login', 'register', 'forgot', 'reset'], true)) {
     if (count($hits) >= 20) out(['error' => 'Too many attempts. Try again in a few minutes.'], 429);
     $hits[] = $now;
     @file_put_contents($rl, implode("\n", $hits), LOCK_EX);
@@ -66,10 +70,53 @@ if ($action === 'logout') {
     out(['user' => null]);
 }
 
-// ── validate credentials for register/login ───────────────────────────────
+$pass = isset($body['password']) ? (string)$body['password'] : '';
+
+// ── RESET (uses a token, not email — handled before the email check below) ─
+if ($action === 'reset') {
+    $token = isset($body['token']) ? (string)$body['token'] : '';
+    if ($token === '' || strlen($pass) < 8) out(['error' => 'Enter a new password (8+ characters).'], 400);
+
+    $tokenHash = hash('sha256', $token);
+    $stmt = $pdo->prepare('SELECT id, user_id FROM password_resets WHERE token_hash = ? AND used_at IS NULL AND expires_at > NOW()');
+    $stmt->execute([$tokenHash]);
+    $row = $stmt->fetch();
+    if (!$row) out(['error' => 'This reset link is invalid or has expired. Request a new one.'], 400);
+
+    $pdo->prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+        ->execute([password_hash($pass, PASSWORD_DEFAULT), $row['user_id']]);
+    $pdo->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?')->execute([$row['id']]);
+
+    startSession();
+    session_regenerate_id(true);
+    $_SESSION['uid'] = (int)$row['user_id'];
+    out(['user' => publicUser(currentUser())]);
+}
+
+// ── validate email for register/login/forgot ──────────────────────────────
 $email = isset($body['email']) ? strtolower(trim($body['email'])) : '';
-$pass  = isset($body['password']) ? (string)$body['password'] : '';
 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 255) out(['error' => 'Enter a valid email.'], 400);
+
+// ── FORGOT PASSWORD ─────────────────────────────────────────────────────
+// Always returns the same generic response whether or not the email is
+// registered — prevents using this endpoint to enumerate accounts.
+if ($action === 'forgot') {
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    $row = $stmt->fetch();
+    if ($row) {
+        $token = bin2hex(random_bytes(32));
+        $pdo->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))')
+            ->execute([$row['id'], hash('sha256', $token)]);
+        $link = 'https://crivac.com/yp2.html?reset=' . urlencode($token);
+        sendEmail($email, 'Reset your Yard Picker Pro password', '
+            <p>Someone (hopefully you) requested a password reset for your Yard Picker Pro account.</p>
+            <p><a href="' . htmlspecialchars($link) . '">Click here to set a new password</a> (link expires in 1 hour).</p>
+            <p>If you did not request this, you can ignore this email.</p>
+        ');
+    }
+    out(['ok' => true]);
+}
 
 // ── REGISTER ──────────────────────────────────────────────────────────────
 if ($action === 'register') {
