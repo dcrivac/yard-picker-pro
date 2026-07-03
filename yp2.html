@@ -414,7 +414,11 @@ function api(body,cb){
   x.ontimeout=function(){cb('Timed out. Try again.');};
   x.onerror=function(){cb('Network error. Check connection.');};
   x.onload=function(){
+    if(x.status===401){openAuth('login');S('er','Sign in to run an analysis.');cb('Sign in to run an analysis.');return;}
+    if(x.status===402){authUser&&(authUser.credits=0);renderAuth();cb('You’re out of credits. Buy more to keep analyzing.');return;}
     if(x.status!==200){cb('HTTP '+x.status+': '+x.responseText.slice(0,150));return;}
+    var rem=x.getResponseHeader('X-Credits-Remaining');
+    if(rem!==null&&authUser){authUser.credits=parseInt(rem,10)||0;renderAuth();}
     var d;try{d=JSON.parse(x.responseText);}catch(e){cb('Bad response');return;}
     if(d.error){var m=d.error.message||'';cb(m.indexOf('credit')>-1?'API credits empty — add at console.anthropic.com':m||'API error');return;}
     cb(null,(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join(''));
@@ -521,6 +525,10 @@ document.getElementById('bAnalyze').onclick=runAnalyze;
 document.getElementById('bMore').onclick=runAnalyze;
 
 function runAnalyze(){
+  // Analysis requires an account (it's the paid, AI-cost step). Inventory
+  // fetching stays free/anonymous.
+  if(!authUser){openAuth('login');S('er','Sign in to run an analysis — 5 free per month.');return;}
+  if(authUser.credits<=0){openAuth('login');S('er','You’re out of credits this month.');return;}
   // Use selected vehicles if any, otherwise use filtered list
   var sel = filtered.filter(function(v){ return v._sel; });
   var pool = sel.length > 0 ? sel : filtered;

@@ -52,6 +52,23 @@ function startSession() {
     session_start();
 }
 
+// Roll the free monthly allowance if we've entered a new calendar month,
+// then return [freeRemaining, paidCredits, totalAvailable] for a user row.
+// Shared by auth.php (display) and api.php (spend check) so they never drift.
+function creditStatus($user) {
+    $pdo = db();
+    if (!$pdo || !$user) return [0, 0, 0];
+    $freeMonthly = (int)(getenv('FREE_MONTHLY') ?: 5);
+    if (substr((string)$user['free_period_start'], 0, 7) !== gmdate('Y-m')) {
+        $pdo->prepare('UPDATE users SET free_credits_used = 0, free_period_start = ? WHERE id = ?')
+            ->execute([gmdate('Y-m-d'), $user['id']]);
+        $user['free_credits_used'] = 0;
+    }
+    $free = max(0, $freeMonthly - (int)$user['free_credits_used']);
+    $paid = (int)$user['credits'];
+    return [$free, $paid, $free + $paid];
+}
+
 // Return the current logged-in user row, or null. Cached per request.
 function currentUser() {
     static $cached = null;
