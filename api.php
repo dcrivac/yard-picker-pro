@@ -3,6 +3,7 @@
 $envFile = __DIR__ . '/.env.php';
 if (is_file($envFile)) { require $envFile; }
 require_once __DIR__ . '/ebay-prices.php';
+require_once __DIR__ . '/db.php';
 define('ANTHROPIC_KEY', getenv('ANTHROPIC_API_KEY') ?: '');
 // Daily Anthropic spend ceiling (USD) across ALL users — circuit breaker
 // against a viral-traffic surprise bill. Approximate; based on token usage
@@ -355,6 +356,21 @@ function findLKQPrice($name, $lkq) {
     return $bestKey ? ['price'=>$lkq[$bestKey],'matched'=>$bestKey] : ['price'=>50,'matched'=>'DEFAULT'];
 }
 
+// ── CREDIT CHECK ──────────────────────────────────────────────────────────
+// Every analysis call costs 1 credit. Free-tier allowance resets each
+// calendar month; purchased credits never expire and are spent only after
+// the free allowance is used up. Deduction happens AFTER a successful
+// Anthropic response (below), so failed calls are never charged.
+$me = currentUser();
+if (!$me) { fail(401, 'Sign in required'); }
+
+$pdo = db();
+list($freeRemaining, $paidCredits, $totalAvail) = creditStatus($me);
+if ($totalAvail <= 0) {
+    header('X-Credits-Remaining: 0');
+    fail(402, 'Out of credits for user ' . $me['id']);
+}
+
 // ── CALL ANTHROPIC ────────────────────────────────────────────────────────
 $ch = curl_init('https://api.anthropic.com/v1/messages');
 curl_setopt_array($ch, [
@@ -388,6 +404,20 @@ $parsedResp = json_decode($response, true);
 if (isset($parsedResp['usage']) && isset($decoded['model'])) {
     recordCost($decoded['model'], $parsedResp['usage']);
 }
+
+// Deduct 1 credit now that the call succeeded. Spend the free allowance
+// first, then a purchased credit. Record the spend in the ledger and hand
+// the new remaining balance back to the client via a response header.
+if ($freeRemaining > 0) {
+    $pdo->prepare('UPDATE users SET free_credits_used = free_credits_used + 1 WHERE id = ?')->execute([$me['id']]);
+    $pdo->prepare('INSERT INTO credit_events (user_id, delta, reason) VALUES (?, 0, ?)')->execute([$me['id'], 'analysis_free']);
+    $freeRemaining--;
+} else {
+    $pdo->prepare('UPDATE users SET credits = GREATEST(credits - 1, 0) WHERE id = ?')->execute([$me['id']]);
+    $pdo->prepare('INSERT INTO credit_events (user_id, delta, reason) VALUES (?, -1, ?)')->execute([$me['id'], 'analysis_paid']);
+    $paidCredits = max(0, $paidCredits - 1);
+}
+header('X-Credits-Remaining: ' . ($freeRemaining + $paidCredits));
 
 // Build carIndex → vehicle map by parsing the "Car N: YYYY MAKE MODEL [Row X]"
 // lines from the prompt. Used to construct eBay search queries per part.

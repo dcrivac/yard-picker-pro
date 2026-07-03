@@ -25,7 +25,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 function out($data, $status = 200) { http_response_code($status); echo json_encode($data); exit; }
 function publicUser($u) {
     if (!$u) return null;
-    return ['email' => $u['email'], 'credits' => (int)$u['credits']];
+    list($free, $paid, $total) = creditStatus($u);
+    return ['email' => $u['email'], 'credits' => $total, 'free' => $free, 'paid' => $paid];
 }
 
 $pdo = db();
