@@ -38,3 +38,26 @@ CREATE TABLE IF NOT EXISTS password_resets (
     INDEX (token_hash),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Profit Tracker items, tied to the user's account instead of localStorage.
+-- id is server-assigned (the client no longer generates ids) so every
+-- lookup/update/delete can be safely scoped to (id, user_id).
+CREATE TABLE IF NOT EXISTS tracker_items (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT NOT NULL,
+    part       VARCHAR(255) NOT NULL,
+    car        VARCHAR(255) NOT NULL,
+    lkq_cost   DECIMAL(10,2) NULL,
+    labor_cost DECIMAL(10,2) NULL,
+    ebay_avg   DECIMAL(10,2) NULL,
+    list_price DECIMAL(10,2) NULL,
+    sale_price DECIMAL(10,2) NULL,
+    reason     VARCHAR(255) NULL,
+    status     VARCHAR(16) NOT NULL DEFAULT 'pulled',    -- 'pulled' / 'listed' / 'sold'
+    pulled_at  TIMESTAMP NULL,
+    listed_at  TIMESTAMP NULL,
+    sold_at    TIMESTAMP NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX (user_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
