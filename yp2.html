@@ -706,29 +706,90 @@ function tc(id,rank){
 
 // PROFIT TRACKER
 var TKEY='yp_tracker_v1';
-function loadT(){try{return JSON.parse(localStorage.getItem(TKEY))||[];}catch(e){return[];}}
-function saveT(d){try{localStorage.setItem(TKEY,JSON.stringify(d));}catch(e){}}
+var trackerCache=null;
+var trackedTids={};
+
+function refreshTracker(){
+  if(!authUser){trackerCache=[];renderT();return;}
+  var x=new XMLHttpRequest();
+  x.open('GET','https://crivac.com/tracker.php',true);
+  x.onload=function(){
+    var d;try{d=JSON.parse(x.responseText);}catch(e){d=null;}
+    trackerCache=(d&&d.items)||[];
+    migrateLocalTracker();
+  };
+  x.onerror=function(){trackerCache=trackerCache||[];renderT();};
+  x.send();
+}
+
+// One-time migration for accounts that used the tracker before it moved
+// server-side: only runs if the server has nothing yet and localStorage does,
+// so it never re-runs or duplicates rows once the migration has happened.
+function migrateLocalTracker(){
+  var local;try{local=JSON.parse(localStorage.getItem(TKEY))||[];}catch(e){local=[];}
+  if(trackerCache.length||!local.length){renderT();return;}
+  var remaining=local.length;
+  local.forEach(function(item){
+    var x=new XMLHttpRequest();
+    x.open('POST','https://crivac.com/tracker.php',true);
+    x.setRequestHeader('Content-Type','application/json');
+    x.onload=function(){
+      try{var d=JSON.parse(x.responseText);if(d.item)trackerCache.push(d.item);}catch(e){}
+      if(--remaining===0){localStorage.removeItem(TKEY);renderT();}
+    };
+    x.onerror=function(){if(--remaining===0){localStorage.removeItem(TKEY);renderT();}};
+    x.send(JSON.stringify({action:'add',part:item.part,car:item.car,lkqCost:item.lkqCost,laborCost:item.laborCost,ebayAvg:item.ebayAvg,reason:item.reason,status:item.status,pulledAt:item.pulledAt,listPrice:item.listPrice,listedAt:item.listedAt,salePrice:item.salePrice,soldAt:item.soldAt}));
+  });
+}
 
 function addToTracker(item){
-  var d=loadT();
-  if(d.find(function(x){return x.id===item.id;})){alert(item.part+' already tracked');return;}
+  if(trackedTids[item.id]){alert(item.part+' already tracked');return;}
+  trackedTids[item.id]=true;
   if(window.umami)umami.track('add_to_tracker',{part:item.part});
-  item.status='pulled';item.pulledAt=Date.now();
-  d.push(item);saveT(d);renderT();
-  document.getElementById('step4').scrollIntoView({behavior:'smooth'});
+  var x=new XMLHttpRequest();
+  x.open('POST','https://crivac.com/tracker.php',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.onload=function(){
+    try{var d=JSON.parse(x.responseText);if(d.item){trackerCache=trackerCache||[];trackerCache.push(d.item);renderT();}}catch(e){}
+    document.getElementById('step4').scrollIntoView({behavior:'smooth'});
+  };
+  x.send(JSON.stringify({action:'add',part:item.part,car:item.car,lkqCost:item.lkqCost,laborCost:item.laborCost,ebayAvg:item.ebayAvg,reason:item.reason}));
 }
 
 function updateStatus(id,status){
-  var d=loadT();
+  var d=trackerCache||[];
   var item=d.find(function(x){return x.id===id;});
   if(!item)return;
-  if(status==='delete'){if(!confirm('Remove '+item.part+'?'))return;d=d.filter(function(x){return x.id!==id;});saveT(d);renderT();return;}
-  if(status==='listed'){var p=prompt('eBay listing price for '+item.part+'?',item.ebayAvg||'');if(!p)return;item.listPrice=parseFloat(p);item.listedAt=Date.now();}
-  if(status==='sold'){var s=prompt('Final sale price for '+item.part+'?',item.listPrice||'');if(!s)return;item.salePrice=parseFloat(s);item.soldAt=Date.now();}
-  item.status=status;saveT(d);renderT();
+  if(status==='delete'){
+    if(!confirm('Remove '+item.part+'?'))return;
+    trackerCache=d.filter(function(x){return x.id!==id;});renderT();
+    var x=new XMLHttpRequest();
+    x.open('POST','https://crivac.com/tracker.php',true);
+    x.setRequestHeader('Content-Type','application/json');
+    x.send(JSON.stringify({action:'delete',id:id}));
+    return;
+  }
+  var payload={action:'update_status',id:id,status:status};
+  if(status==='listed'){var p=prompt('eBay listing price for '+item.part+'?',item.ebayAvg||'');if(!p)return;payload.listPrice=parseFloat(p);item.listPrice=payload.listPrice;item.listedAt=Date.now();}
+  if(status==='sold'){var s=prompt('Final sale price for '+item.part+'?',item.listPrice||'');if(!s)return;payload.salePrice=parseFloat(s);item.salePrice=payload.salePrice;item.soldAt=Date.now();}
+  item.status=status;renderT();
+  var x=new XMLHttpRequest();
+  x.open('POST','https://crivac.com/tracker.php',true);
+  x.setRequestHeader('Content-Type','application/json');
+  x.send(JSON.stringify(payload));
 }
 
-function clearTracker(){if(!confirm('Clear all tracker data?'))return;localStorage.removeItem(TKEY);renderT();}
+function clearTracker(){
+  if(!confirm('Clear all tracker data?'))return;
+  var ids=(trackerCache||[]).map(function(x){return x.id;});
+  trackerCache=[];renderT();
+  ids.forEach(function(id){
+    var x=new XMLHttpRequest();
+    x.open('POST','https://crivac.com/tracker.php',true);
+    x.setRequestHeader('Content-Type','application/json');
+    x.send(JSON.stringify({action:'delete',id:id}));
+  });
+}
 
 var curTab='pulled';
 function showTab(t){
@@ -740,7 +801,7 @@ function showTab(t){
 }
 
 function renderT(){
-  var d=loadT();
+  var d=trackerCache||[];
   // Show tracker section only when there is data
   var s4=document.getElementById('step4');
   if(s4) s4.style.display = d.length > 0 ? 'block' : 'none';
@@ -766,9 +827,9 @@ function renderT(){
     if(item.salePrice){var net=item.salePrice-(item.lkqCost||0)-item.salePrice*0.1325-25;h+='<div style="font-size:11px;color:#ff6b00;margin-top:2px">Sold: '+fmt(item.salePrice)+' Net: '+fmtD(net)+'</div>';}
     h+='</div><div class="trk-cost">-'+fmt(item.lkqCost||0)+'</div></div>';
     h+='<div class="trk-actions">';
-    if(item.status==='pulled')h+='<button class="trk-btn list" onclick="updateStatus(\''+item.id+'\',\'listed\')">Mark Listed</button>';
-    if(item.status==='listed')h+='<button class="trk-btn sold" onclick="updateStatus(\''+item.id+'\',\'sold\')">Mark Sold</button>';
-    h+='<button class="trk-btn del" onclick="updateStatus(\''+item.id+'\',\'delete\')">Remove</button>';
+    if(item.status==='pulled')h+='<button class="trk-btn list" onclick="updateStatus('+item.id+',\'listed\')">Mark Listed</button>';
+    if(item.status==='listed')h+='<button class="trk-btn sold" onclick="updateStatus('+item.id+',\'sold\')">Mark Sold</button>';
+    h+='<button class="trk-btn del" onclick="updateStatus('+item.id+',\'delete\')">Remove</button>';
     h+='</div></div>';
   });
   el.innerHTML=h;
@@ -863,7 +924,7 @@ function renderAuth(){
 function checkAuth(){
   var x=new XMLHttpRequest();
   x.open('GET','https://crivac.com/auth.php',true);
-  x.onload=function(){try{var d=JSON.parse(x.responseText);authUser=d.user||null;}catch(e){authUser=null;}renderAuth();};
+  x.onload=function(){try{var d=JSON.parse(x.responseText);authUser=d.user||null;}catch(e){authUser=null;}renderAuth();if(authUser)refreshTracker();};
   x.onerror=function(){renderAuth();};
   x.send();
 }
@@ -906,6 +967,7 @@ function submitAuth(){
       return;
     }
     authUser=d.user||null; renderAuth(); closeAuth();
+    if(authUser)refreshTracker();
     if(window.umami)umami.track(authMode==='login'?'login':authMode==='reset'?'password_reset':'signup');
   };
   x.onerror=function(){btn.disabled=false;authGet('authErr').textContent='Network error.';};
@@ -915,7 +977,7 @@ function logout(){
   var x=new XMLHttpRequest();
   x.open('POST','https://crivac.com/auth.php',true);
   x.setRequestHeader('Content-Type','application/json');
-  x.onload=function(){authUser=null;renderAuth();};
+  x.onload=function(){authUser=null;renderAuth();trackerCache=[];renderT();};
   x.send(JSON.stringify({action:'logout'}));
 }
 authGet('authLink').onclick=function(e){e.preventDefault();openAuth('login');};
