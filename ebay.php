@@ -42,7 +42,10 @@ foreach (['Year' => 'year', 'Make' => 'make', 'Model' => 'model'] as $k => $para
     }
 }
 
-$result = ebaySearchMedian($q, $compat);
+// Optional category id passthrough so we can test $PART_CATEGORIES entries
+// from curl before committing them in api.php.
+$cat = isset($_GET['cat']) ? trim($_GET['cat']) : '';
+$result = $cat !== '' ? ebaySearchMedian($q, $compat, $cat) : ebaySearchMedian($q, $compat);
 if (!$result) {
     echo json_encode(['error' => 'No data', 'q' => $q, 'compat' => $compat]);
     exit;

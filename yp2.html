@@ -674,8 +674,10 @@ function renderResults(rate){
       h+='<div><span class="k">Shipping '+shipLbl+'</span><span class="v vm2">–'+fmtD(p.shipping)+'</span></div>';
       h+='<div style="border-top:1px solid #f0f0f0;margin-top:4px;padding-top:6px"><span class="k" style="color:#aaa;font-weight:700">NET PROFIT</span><span class="v vtot" style="color:'+nc+'">'+fmtD(p.netProfit)+'</span></div>';
       var yt='https://www.youtube.com/results?search_query='+encodeURIComponent('how to remove '+pq+' '+car.year+' '+car.make+' '+car.model);
+      // Disclosure needs to sit on the link itself, not just the page footer, to be "clear and conspicuous" per FTC guidance.
+      var affNote=EPN_CAMPID?' <span style="font-size:9px;color:#333" title="Affiliate link. As an eBay Partner we may be compensated if you make a purchase.">(affiliate)</span>':'';
       h+='</div><div style="display:flex;border-top:2px solid #f0f0f0">';
-      h+='<a href="'+eu+'" target="_blank" onclick="if(window.umami)umami.track(\'ebay_link_clicked\')" class="eb" style="flex:1;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px">🔍 eBay sold →</a>';
+      h+='<a href="'+eu+'" target="_blank" onclick="if(window.umami)umami.track(\'ebay_link_clicked\')" class="eb" style="flex:1;border-right:1px solid #f0f0f0;margin:0;padding:8px 10px">🔍 eBay sold →'+affNote+'</a>';
       h+='<a href="'+yt+'" target="_blank" class="eb" style="flex:1;border-right:1px solid #f0f0f0;text-align:center;margin:0;padding:8px 10px">🔧 Remove →</a>';
       var tid='t'+Date.now()+Math.random().toString(36).slice(2,5);
       window._tdata=window._tdata||{};
