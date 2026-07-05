@@ -225,9 +225,12 @@ $PART_CATEGORIES = [
     "Fuel Pump"=>"33591","Fuel Pump (Direct Injection)"=>"33591","Fuel Tank"=>"33591",
     // Engine computers + electronics + sensors
     "ECU / PCM"=>"33596","Chassis Control Module"=>"33596",
-    "Coil Pack"=>"33580","Distributor"=>"33580","Air Flow Meter"=>"33580",
-    "Actuator"=>"33580","Fuse Box"=>"33580","Sliding Door Motor"=>"33580",
-    "DC Converter (Hybrid)"=>"33580","Air Bag"=>"33580","Airbag Sensor"=>"33580",
+    // 33580 was a grab-bag shared by ~10 unrelated part types (verified via
+    // research: it's not even an auto-parts category, it returns generic
+    // industrial relays/sensors). Split into eBay's actual per-part categories.
+    "Coil Pack"=>"262183","Distributor"=>"33690","Air Flow Meter"=>"33557",
+    "Actuator"=>"262083","Fuse Box"=>"262221","Sliding Door Motor"=>"262149",
+    "DC Converter (Hybrid)"=>"177701","Air Bag"=>"177710","Airbag Sensor"=>"177711",
     // Charging + starting
     "Alternator"=>"33543","Starter Motor"=>"33543","Battery"=>"33543","Battery (Hybrid)"=>"33543",
     // Cooling + A/C
@@ -252,14 +255,17 @@ $PART_CATEGORIES = [
     "Headlight"=>"33614","Tail Light"=>"33710","Taillight"=>"33710",
     "Mirror (Side View)"=>"33713",
     // Drivetrain + transmission
-    "Transmission (Auto)"=>"33692","Transmission (Manual)"=>"33692",
-    "Transmission Solenoid Pack"=>"33692","Transmission Valve Body"=>"33692",
-    "Torque Converter"=>"33692","Drive Shaft"=>"33692",
-    "CV Axle Shaft"=>"33692","Axle Shaft"=>"33692",
-    "Axle Assembly Front"=>"33692","Axle Assembly Rear"=>"33692",
-    "Axle Housing"=>"33692","Differential"=>"33692",
-    "Transfer Case"=>"33692","Transfer Case Motor"=>"33692",
-    "Carrier Assembly"=>"33692","Ring and Pinion Gear"=>"33692",
+    // 33692 was wrong for this whole block (confirmed: it's eBay's
+    // "Ignition Wires & Coil Boots" category, unrelated to drivetrain).
+    // Replaced with each part's actual category.
+    "Transmission (Auto)"=>"171115","Transmission (Manual)"=>"171117",
+    "Transmission Solenoid Pack"=>"33727","Transmission Valve Body"=>"33727",
+    "Torque Converter"=>"63692","Drive Shaft"=>"262250",
+    "CV Axle Shaft"=>"262243","Axle Shaft"=>"262238",
+    "Axle Assembly Front"=>"262238","Axle Assembly Rear"=>"262238",
+    "Axle Housing"=>"33728","Differential"=>"262244",
+    "Transfer Case"=>"262256","Transfer Case Motor"=>"262257",
+    "Carrier Assembly"=>"262244","Ring and Pinion Gear"=>"262244",
     // Suspension + steering + brakes
     "Control Arm Lower"=>"33586","Control Arm Upper"=>"33586",
     "Strut Assembly"=>"33586","Strut (Air)"=>"33586",
@@ -280,8 +286,9 @@ $PART_CATEGORIES = [
     "Amplifier"=>"6755",
     // Wheels + wiring
     "Wheel (Aluminum)"=>"33567","Wheel (Steel)"=>"33567","Wheel / Rim"=>"33567",
-    "Wiring Harness (Body)"=>"33580","Wiring Harness (Dash)"=>"33580",
-    "Wiring Harness (Engine)"=>"33580",
+    // Was 33580 (see note above); moved to eBay's actual wiring harness category.
+    "Wiring Harness (Body)"=>"179847","Wiring Harness (Dash)"=>"179847",
+    "Wiring Harness (Engine)"=>"179847",
 ];
 
 // Fetch a yard's live PYP price list by locationCode (the trailing number
