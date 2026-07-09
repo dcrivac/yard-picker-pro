@@ -239,13 +239,24 @@ Goal: app survives being shared publicly without bleeding money.
 
 Goal: actually market it.
 
-- [ ] SEO: real metadata, sitemap, blog posts on "how to flip junkyard parts on eBay."
+- [x] SEO: real metadata, sitemap, robots.txt, Open Graph/Twitter tags, favicon — PR #48.
 - [x] eBay Partner Network — PR #42. Campaign `5339163850` active on every eBay outbound link.
 - [ ] Referral codes: existing users get free credits for each signup.
-- [ ] Reddit posts in r/Justrolledintotheshop, r/MechanicAdvice, r/Flipping.
+- [x] First Reddit traffic test — see "Growth channel notes" below.
 - [ ] TikTok demos.
 - [ ] Email list capture from landing page → MailerLite or ConvertKit.
 - [ ] Better landing page: real pull-list screenshots, social proof, testimonials.
+
+#### Growth channel notes (from the first Reddit push)
+
+Builder-audience subreddits (r/SideProject, r/SaaS, r/indiehackers, r/microsaas) test whether *other builders* find the idea interesting, not whether the actual target audience (junkyard part flippers) wants it. Worth remembering before re-running this playbook:
+
+- **r/SideProject, r/SaaS, r/indiehackers, r/microsaas** — every attempt got auto-removed or mod-removed, regardless of content (tested plain prose, zero links, no bullet lists — none of it mattered). Root cause confirmed via Automod's own message on one attempt: per-subreddit comment-karma gate (10 karma minimum, earned *within that specific subreddit*, not sitewide). Fix is building a little real karma in each sub first, not rewriting the post.
+- **r/buildinpublic** — the one channel that worked. Survived on the first attempt, no gate hit. 8 replies of genuine back-and-forth from real builders. Two independent commenters gave the same advice: post in the exact niche where the pain already lives (comment, don't broadcast), and specific, honest "plain breakdown" posts outperform polished feature-list pitches.
+- **r/Flipping** — confirmed real target-audience overlap, but bans self-promotion posts outright. Only viable via organic participation: reply to existing threads where someone's asking what's worth pulling/flipping, mention the tool only if genuinely relevant.
+- **r/Justrolledintotheshop** — wrong community entirely (posts photos of weird/broken cars, not a tools/parts-sourcing discussion space). Don't reuse this one.
+- **PYP/LKQ-specific Facebook groups** — flagged by a commenter as a likely real channel, unverified. Facebook groups don't surface in web search, so this needs to be found and joined manually.
+- Umami events (`buy_credits_opened`, `checkout_started`, the full signup→analyze funnel) are the source of truth for whether any channel actually converts, not comment count or upvotes.
 
 ### Phase 5 — moat-building
 
