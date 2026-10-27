@@ -3,6 +3,21 @@
 > Hard-won operational knowledge. Read this before touching deploys, caching, or
 > the SiteGround server. Several non-obvious traps here cost a lot of debugging.
 
+## Move to yardpicker.crivac.com (Oct 2026)
+
+crivac.com is now the portfolio site on Cloudflare, so the app moved to its own
+subdomain. The host is set by `APP_ORIGIN` in `.env.php` (see `config.php`).
+CORS allowlists, Stripe redirect URLs, password-reset links and the eBay
+deletion endpoint all derive from it. The frontend calls the PHP endpoints with
+relative URLs. The docroot sections below describe the old SiteGround apex
+setup; the deploy workflow now reads the docroot from the `DEPLOY_PATH` repo
+variable.
+
+After the subdomain is live, update these outside the repo:
+- eBay developer portal: deletion endpoint URL (must match exactly, eBay re-verifies it)
+- Stripe: webhook endpoint URL (new endpoint, new signing secret)
+- Resend: sender domain, if reset emails use a different domain
+
 ## The real document root (critical)
 
 crivac.com serves from:

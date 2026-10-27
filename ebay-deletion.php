@@ -13,7 +13,8 @@ if (is_file($envFile)) { require $envFile; }
 
 $VERIFICATION_TOKEN = getenv('EBAY_VERIFICATION_TOKEN') ?: '';
 // Must exactly match the URL configured in the eBay developer portal.
-$ENDPOINT_URL = 'https://crivac.com/ebay-deletion.php';
+require_once __DIR__ . '/config.php';
+$ENDPOINT_URL = getenv('EBAY_DELETION_ENDPOINT') ?: APP_ORIGIN . '/ebay-deletion.php';
 
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');

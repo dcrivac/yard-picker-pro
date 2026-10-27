@@ -1,5 +1,5 @@
 <?php
-// Auth endpoint. Same-origin (crivac.com), session-cookie based.
+// Auth endpoint. Same-origin (APP_ORIGIN, see config.php), session-cookie based.
 //
 //   POST auth.php {action:"register", email, password}
 //   POST auth.php {action:"login",    email, password}
@@ -17,7 +17,8 @@ require_once __DIR__ . '/db.php';
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
-$allowedOrigins = ['https://crivac.com', 'https://www.crivac.com'];
+require_once __DIR__ . '/config.php';
+$allowedOrigins = allowedOrigins();
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (in_array($origin, $allowedOrigins, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);
@@ -108,7 +109,7 @@ if ($action === 'forgot') {
         $token = bin2hex(random_bytes(32));
         $pdo->prepare('INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 1 HOUR))')
             ->execute([$row['id'], hash('sha256', $token)]);
-        $link = 'https://crivac.com/yp2.html?reset=' . urlencode($token);
+        $link = APP_ORIGIN . '/yp2.html?reset=' . urlencode($token);
         sendEmail($email, 'Reset your Yard Picker Pro password', '
             <p>Someone (hopefully you) requested a password reset for your Yard Picker Pro account.</p>
             <p><a href="' . htmlspecialchars($link) . '">Click here to set a new password</a> (link expires in 1 hour).</p>

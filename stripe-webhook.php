@@ -4,7 +4,7 @@
 // (no Stripe SDK / composer dependency in this codebase).
 //
 // Configure in the Stripe Dashboard: Developers > Webhooks > Add endpoint
-//   URL:    https://crivac.com/stripe-webhook.php
+//   URL:    https://yardpicker.crivac.com/stripe-webhook.php (APP_ORIGIN + /stripe-webhook.php)
 //   Events: checkout.session.completed
 // Copy the "Signing secret" (whsec_...) into .env.php as STRIPE_WEBHOOK_SECRET.
 

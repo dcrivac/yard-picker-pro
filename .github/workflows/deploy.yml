@@ -1,4 +1,4 @@
-name: Deploy to SiteGround
+name: Deploy to app host
 
 on:
   push:
@@ -16,8 +16,12 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          # DEPLOY_PATH is a repo variable (Settings > Secrets and variables > Actions > Variables)
+          # holding the docroot of the yardpicker subdomain on the server.
           script: |
-            cd ~/www/crivac.com/public_html
+            set -e
+            [ -n "${{ vars.DEPLOY_PATH }}" ] || { echo "DEPLOY_PATH repo variable is not set"; exit 1; }
+            cd ${{ vars.DEPLOY_PATH }}
             git remote set-url origin https://github.com/dcrivac/yard-picker-pro.git
             git fetch origin main
             git reset --hard origin/main

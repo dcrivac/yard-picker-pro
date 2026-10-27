@@ -8,7 +8,8 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 
-$allowedOrigins = ['https://crivac.com', 'https://www.crivac.com'];
+require_once __DIR__ . '/config.php';
+$allowedOrigins = allowedOrigins();
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (in_array($origin, $allowedOrigins, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);

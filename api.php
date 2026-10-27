@@ -51,8 +51,9 @@ function recordCost($model, $usage) {
     fclose($fp);
 }
 
-// CORS allowlist — only crivac.com origins may call this endpoint.
-$allowedOrigins = ['https://crivac.com', 'https://www.crivac.com'];
+// CORS allowlist — only APP_ORIGIN (config.php) may call this endpoint.
+require_once __DIR__ . '/config.php';
+$allowedOrigins = allowedOrigins();
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 header('Content-Type: application/json');
 header('Vary: Origin');
