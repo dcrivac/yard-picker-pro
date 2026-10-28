@@ -1,0 +1,17 @@
+name: pyp-probe
+on:
+  push:
+    branches: [pyp-probe]
+    paths: [.github/workflows/pyp-probe.yml]
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch pyp.com from a GitHub runner (datacenter IP)
+        run: |
+          UA="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
+          echo "egress: $(curl -s https://api.ipify.org)"
+          for u in "inventory/chula-vista-1264/" "DesktopModules/pyp_api/api/PriceList/?locationCode=1264" "prices/chula-vista-1264/"; do
+            code=$(curl -s -o out.html -w "%{http_code}" -A "$UA" -H "x-requested-with: XMLHttpRequest" -H "Referer: https://www.pyp.com/prices/chula-vista-1264/" "https://www.pyp.com/$u")
+            echo "$code challenge=$(grep -c 'Just a moment' out.html) bytes=$(wc -c < out.html) vehicles=$(grep -c 'available for parts' out.html) $u"
+          done
