@@ -13,6 +13,21 @@ relative URLs. The docroot sections below describe the old SiteGround apex
 setup; the deploy workflow now reads the docroot from the `DEPLOY_PATH` repo
 variable.
 
+New server: `deploy/setup.sh` provisions a fresh Ubuntu 24.04 VPS (Caddy,
+PHP 8.3-FPM, MariaDB, schema, `.env.php` with generated DB credentials, and a
+key-only `deploy` user for the workflow). Paste it as DigitalOcean user data:
+
+```bash
+#!/bin/bash
+export DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy@yard-picker-pro"
+curl -fsSL https://raw.githubusercontent.com/dcrivac/yard-picker-pro/main/deploy/setup.sh | bash
+```
+
+Progress is logged to `/var/log/yardpicker-setup.log`. The script is safe to
+re-run. Caddy trusts Cloudflare's IP ranges and passes `CF-Connecting-IP` to
+PHP as `REMOTE_ADDR`, so the per-IP rate limit in `api.php` still sees real
+visitors behind the proxy.
+
 After the subdomain is live, update these outside the repo:
 - eBay developer portal: deletion endpoint URL (must match exactly, eBay re-verifies it)
 - Stripe: webhook endpoint URL (new endpoint, new signing secret)
