@@ -9,6 +9,7 @@
 // pattern as ebay-prices.php talking to eBay.
 
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/config.php';
 
 $me = currentUser();
 if (!$me) { http_response_code(401); echo 'Sign in first, then try again.'; exit; }
@@ -26,8 +27,8 @@ if ($secretKey === '') { http_response_code(503); echo 'Payments are not configu
 
 $params = [
     'mode'                                  => 'payment',
-    'success_url'                           => 'https://crivac.com/yp2.html?checkout=success',
-    'cancel_url'                            => 'https://crivac.com/yp2.html?checkout=cancelled',
+    'success_url'                           => APP_ORIGIN . '/yp2.html?checkout=success',
+    'cancel_url'                            => APP_ORIGIN . '/yp2.html?checkout=cancelled',
     'client_reference_id'                   => (string)$me['id'],
     'customer_email'                        => $me['email'],
     'line_items[0][quantity]'               => 1,

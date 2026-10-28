@@ -1,5 +1,5 @@
 <?php
-// Profit Tracker endpoint. Same-origin (crivac.com), session-cookie based.
+// Profit Tracker endpoint. Same-origin (APP_ORIGIN, see config.php), session-cookie based.
 // Requires a signed-in user (api.php already requires login to run an
 // analysis, so by the time a "+ Track" button exists the user is signed in).
 //
@@ -16,7 +16,8 @@ require_once __DIR__ . '/db.php';
 header('Content-Type: application/json');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 
-$allowedOrigins = ['https://crivac.com', 'https://www.crivac.com'];
+require_once __DIR__ . '/config.php';
+$allowedOrigins = allowedOrigins();
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (in_array($origin, $allowedOrigins, true)) {
     header('Access-Control-Allow-Origin: ' . $origin);

@@ -98,11 +98,11 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
   <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:8px;max-width:340px;width:100%;padding:22px">
     <div style="font-size:16px;font-weight:800;color:#fff;margin-bottom:4px">Buy credits</div>
     <div style="font-size:11px;color:#888;margin-bottom:16px">1 credit = 1 analysis batch (up to 5 vehicles, 10 parts each).</div>
-    <a href="https://crivac.com/checkout.php?pack=small" onclick="if(window.umami)umami.track('checkout_started',{pack:'small'})" style="display:block;background:#1a1000;border:1px solid #ff6b00;border-radius:6px;padding:14px;margin-bottom:10px;text-decoration:none">
+    <a href="/checkout.php?pack=small" onclick="if(window.umami)umami.track('checkout_started',{pack:'small'})" style="display:block;background:#1a1000;border:1px solid #ff6b00;border-radius:6px;padding:14px;margin-bottom:10px;text-decoration:none">
       <div style="color:#fff;font-weight:700;font-size:14px">30 analyses — $5</div>
       <div style="color:#888;font-size:11px">17¢ each</div>
     </a>
-    <a href="https://crivac.com/checkout.php?pack=large" onclick="if(window.umami)umami.track('checkout_started',{pack:'large'})" style="display:block;background:#1a1000;border:1px solid #ff6b00;border-radius:6px;padding:14px;margin-bottom:10px;text-decoration:none">
+    <a href="/checkout.php?pack=large" onclick="if(window.umami)umami.track('checkout_started',{pack:'large'})" style="display:block;background:#1a1000;border:1px solid #ff6b00;border-radius:6px;padding:14px;margin-bottom:10px;text-decoration:none">
       <div style="color:#fff;font-weight:700;font-size:14px">100 analyses — $15</div>
       <div style="color:#888;font-size:11px">15¢ each · best value</div>
     </a>
@@ -429,7 +429,7 @@ function updateAnalyzeBtn(){
 // ── API ────────────────────────────────────────────────────────
 function api(body,cb){
   var x=new XMLHttpRequest();
-  x.open('POST','https://crivac.com/api.php?slug='+encodeURIComponent(currentSlug),true);
+  x.open('POST','/api.php?slug='+encodeURIComponent(currentSlug),true);
   x.setRequestHeader('Content-Type','application/json');
   x.timeout=120000;
   x.ontimeout=function(){cb('Timed out. Try again.');};
@@ -469,7 +469,7 @@ document.getElementById('bFetch').onclick=function(){
   L('▶ Connecting to pyp.com...');
   // Send both url and slug
   var x=new XMLHttpRequest();
-  x.open('GET','https://crivac.com/scrape.php?url='+encodeURIComponent(url)+'&slug='+encodeURIComponent(slug)+'&_cb='+Date.now(),true);
+  x.open('GET','/scrape.php?url='+encodeURIComponent(url)+'&slug='+encodeURIComponent(slug)+'&_cb='+Date.now(),true);
   x.timeout=60000;
   x.ontimeout=function(){btn.disabled=false;L('❌ Timed out');S('er','Timed out. Try again.');};
   x.onerror=function(){btn.disabled=false;L('❌ Network error');S('er','Network error.');};
@@ -714,7 +714,7 @@ var trackedTids={};
 function refreshTracker(){
   if(!authUser){trackerCache=[];renderT();return;}
   var x=new XMLHttpRequest();
-  x.open('GET','https://crivac.com/tracker.php',true);
+  x.open('GET','/tracker.php',true);
   x.onload=function(){
     var d;try{d=JSON.parse(x.responseText);}catch(e){d=null;}
     trackerCache=(d&&d.items)||[];
@@ -733,7 +733,7 @@ function migrateLocalTracker(){
   var remaining=local.length;
   local.forEach(function(item){
     var x=new XMLHttpRequest();
-    x.open('POST','https://crivac.com/tracker.php',true);
+    x.open('POST','/tracker.php',true);
     x.setRequestHeader('Content-Type','application/json');
     x.onload=function(){
       try{var d=JSON.parse(x.responseText);if(d.item)trackerCache.push(d.item);}catch(e){}
@@ -749,7 +749,7 @@ function addToTracker(item){
   trackedTids[item.id]=true;
   if(window.umami)umami.track('add_to_tracker',{part:item.part});
   var x=new XMLHttpRequest();
-  x.open('POST','https://crivac.com/tracker.php',true);
+  x.open('POST','/tracker.php',true);
   x.setRequestHeader('Content-Type','application/json');
   x.onload=function(){
     try{var d=JSON.parse(x.responseText);if(d.item){trackerCache=trackerCache||[];trackerCache.push(d.item);renderT();}}catch(e){}
@@ -766,7 +766,7 @@ function updateStatus(id,status){
     if(!confirm('Remove '+item.part+'?'))return;
     trackerCache=d.filter(function(x){return x.id!==id;});renderT();
     var x=new XMLHttpRequest();
-    x.open('POST','https://crivac.com/tracker.php',true);
+    x.open('POST','/tracker.php',true);
     x.setRequestHeader('Content-Type','application/json');
     x.send(JSON.stringify({action:'delete',id:id}));
     return;
@@ -776,7 +776,7 @@ function updateStatus(id,status){
   if(status==='sold'){var s=prompt('Final sale price for '+item.part+'?',item.listPrice||'');if(!s)return;payload.salePrice=parseFloat(s);item.salePrice=payload.salePrice;item.soldAt=Date.now();}
   item.status=status;renderT();
   var x=new XMLHttpRequest();
-  x.open('POST','https://crivac.com/tracker.php',true);
+  x.open('POST','/tracker.php',true);
   x.setRequestHeader('Content-Type','application/json');
   x.send(JSON.stringify(payload));
 }
@@ -787,7 +787,7 @@ function clearTracker(){
   trackerCache=[];renderT();
   ids.forEach(function(id){
     var x=new XMLHttpRequest();
-    x.open('POST','https://crivac.com/tracker.php',true);
+    x.open('POST','/tracker.php',true);
     x.setRequestHeader('Content-Type','application/json');
     x.send(JSON.stringify({action:'delete',id:id}));
   });
@@ -925,7 +925,7 @@ function renderAuth(){
 }
 function checkAuth(){
   var x=new XMLHttpRequest();
-  x.open('GET','https://crivac.com/auth.php',true);
+  x.open('GET','/auth.php',true);
   x.onload=function(){try{var d=JSON.parse(x.responseText);authUser=d.user||null;}catch(e){authUser=null;}renderAuth();if(authUser)refreshTracker();};
   x.onerror=function(){renderAuth();};
   x.send();
@@ -957,7 +957,7 @@ function submitAuth(){
   var payload={action:authMode,email:email,password:pass};
   if(authMode==='reset')payload.token=resetToken;
   var x=new XMLHttpRequest();
-  x.open('POST','https://crivac.com/auth.php',true);
+  x.open('POST','/auth.php',true);
   x.setRequestHeader('Content-Type','application/json');
   x.onload=function(){
     btn.disabled=false;
@@ -977,7 +977,7 @@ function submitAuth(){
 }
 function logout(){
   var x=new XMLHttpRequest();
-  x.open('POST','https://crivac.com/auth.php',true);
+  x.open('POST','/auth.php',true);
   x.setRequestHeader('Content-Type','application/json');
   x.onload=function(){authUser=null;renderAuth();trackerCache=[];renderT();};
   x.send(JSON.stringify({action:'logout'}));
