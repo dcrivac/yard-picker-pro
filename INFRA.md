@@ -9,24 +9,31 @@ crivac.com is now the portfolio site on Cloudflare, so the app moved to its own
 subdomain. The host is set by `APP_ORIGIN` in `.env.php` (see `config.php`).
 CORS allowlists, Stripe redirect URLs, password-reset links and the eBay
 deletion endpoint all derive from it. The frontend calls the PHP endpoints with
-relative URLs. The docroot sections below describe the old SiteGround apex
-setup; the deploy workflow now reads the docroot from the `DEPLOY_PATH` repo
-variable.
+relative URLs. The docroot and deploy sections below describe the old
+SiteGround apex setup.
 
 New server: `deploy/setup.sh` provisions a fresh Ubuntu 24.04 VPS (Caddy,
-PHP 8.3-FPM, MariaDB, schema, `.env.php` with generated DB credentials, and a
-key-only `deploy` user for the workflow). Paste it as DigitalOcean user data:
+PHP 8.3-FPM, MariaDB, schema, `.env.php` with generated DB credentials). Paste
+this as the cloud provider's user data / custom data:
 
 ```bash
 #!/bin/bash
-export DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy@yard-picker-pro"
 curl -fsSL https://raw.githubusercontent.com/dcrivac/yard-picker-pro/main/deploy/setup.sh | bash
 ```
 
-Progress is logged to `/var/log/yardpicker-setup.log`. The script is safe to
-re-run. Caddy trusts Cloudflare's IP ranges and passes `CF-Connecting-IP` to
-PHP as `REMOTE_ADDR`, so the per-IP rate limit in `api.php` still sees real
-visitors behind the proxy.
+Progress is logged to `/var/log/yardpicker-setup.log`, which ends with a
+`PYP CHECK: PASS/FAIL` line (pyp.com blocks some datacenter IP ranges, so check
+this before keeping a server). The script is safe to re-run.
+
+Deploys are pull-based: a systemd timer fetches `main` every minute and resets
+the docroot to it (`journalctl -u yardpicker-pull` shows each deploy). The repo
+is public, so there are no deploy keys, no GitHub secrets and no inbound SSH
+from CI. `deploy.yml` was removed. Schema changes are not applied
+automatically; run new SQL with `mariadb yardpicker`.
+
+Caddy trusts Cloudflare's IP ranges and passes `CF-Connecting-IP` to PHP as
+`REMOTE_ADDR`, so the per-IP rate limit in `api.php` still sees real visitors
+behind the proxy.
 
 After the subdomain is live, update these outside the repo:
 - eBay developer portal: deletion endpoint URL (must match exactly, eBay re-verifies it)

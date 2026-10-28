@@ -3,15 +3,15 @@
 #
 # Installs Caddy (HTTPS), PHP 8.3-FPM and MariaDB, clones the app into
 # /var/www/yardpicker, loads schema.sql, writes .env.php with generated DB
-# credentials, and creates a `deploy` user for .github/workflows/deploy.yml.
+# credentials, and installs a timer that pulls BRANCH from GitHub every
+# minute (the repo is public, so deploys need no secrets or inbound SSH).
 #
-# Run as root, either as DigitalOcean "user data" or over SSH:
-#   DEPLOY_PUBKEY="ssh-ed25519 AAAA..." bash setup.sh
+# Run as root, as cloud "user data" / "custom data" or over SSH:
+#   bash setup.sh
 #
 # Settings (environment variables):
-#   DEPLOY_PUBKEY  required. Public half of the GitHub Actions SSH_KEY secret.
 #   APP_DOMAIN     default yardpicker.crivac.com
-#   BRANCH         default main. Branch to check out first; deploys reset to main.
+#   BRANCH         default main. Branch the server checks out and follows.
 #
 # Safe to re-run: existing DB credentials and .env.php are kept.
 # Log: /var/log/yardpicker-setup.log
@@ -19,7 +19,6 @@
 set -euo pipefail
 exec > >(tee -a /var/log/yardpicker-setup.log) 2>&1
 
-: "${DEPLOY_PUBKEY:?Set DEPLOY_PUBKEY to the deploy SSH public key}"
 APP_DOMAIN="${APP_DOMAIN:-yardpicker.crivac.com}"
 BRANCH="${BRANCH:-main}"
 REPO_URL="https://github.com/dcrivac/yard-picker-pro.git"
@@ -54,15 +53,12 @@ ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
 
-# Deploy user for GitHub Actions (key-only SSH, owns the docroot).
+# Unprivileged deploy user: owns the docroot and runs the pull timer.
 id deploy >/dev/null 2>&1 || adduser --disabled-password --gecos "" deploy
 usermod -aG www-data deploy
 usermod -aG www-data caddy   # Caddy serves static files from the www-data group docroot
-install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
-grep -qxF "$DEPLOY_PUBKEY" /home/deploy/.ssh/authorized_keys 2>/dev/null || echo "$DEPLOY_PUBKEY" >> /home/deploy/.ssh/authorized_keys
-chown deploy:deploy /home/deploy/.ssh/authorized_keys && chmod 600 /home/deploy/.ssh/authorized_keys
 
-# App code. Full clone (not single-branch) so deploy.yml can fetch main.
+# App code.
 if [ ! -d "$DOCROOT/.git" ]; then
   install -d -o deploy -g www-data -m 750 "$DOCROOT"
   sudo -u deploy git clone --branch "$BRANCH" "$REPO_URL" "$DOCROOT"
@@ -148,6 +144,44 @@ CADDY
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 systemctl reload caddy || systemctl restart caddy
 
+# Pull deploys: every minute, fast-forward the docroot to origin/$BRANCH.
+# Deploy history: journalctl -u yardpicker-pull
+cat > /usr/local/bin/yardpicker-pull <<PULL
+#!/bin/bash
+set -euo pipefail
+cd $DOCROOT
+git fetch -q origin $BRANCH
+if [ "\$(git rev-parse HEAD)" != "\$(git rev-parse origin/$BRANCH)" ]; then
+  git reset -q --hard origin/$BRANCH
+  echo "deployed \$(git rev-parse --short HEAD): \$(git log -1 --format=%s)"
+fi
+PULL
+chmod 755 /usr/local/bin/yardpicker-pull
+cat > /etc/systemd/system/yardpicker-pull.service <<UNIT
+[Unit]
+Description=Pull Yard Picker Pro from GitHub
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+ExecStart=/usr/local/bin/yardpicker-pull
+UNIT
+cat > /etc/systemd/system/yardpicker-pull.timer <<'UNIT'
+[Unit]
+Description=Pull Yard Picker Pro from GitHub every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target
+UNIT
+systemctl daemon-reload
+systemctl enable --now yardpicker-pull.timer
+
 # The app scrapes pyp.com, which blocks some datacenter IP ranges. Check now.
 PYP_CODE="$(curl -s -o /tmp/pyp-check.html -w '%{http_code}' -A 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15' https://www.pyp.com/inventory/chula-vista-1264/ || true)"
 if [ "$PYP_CODE" = "200" ] && ! grep -q 'Just a moment' /tmp/pyp-check.html; then
@@ -158,5 +192,5 @@ fi
 
 echo "== Done. Next steps:"
 echo "  1. Add the API keys to $ENV_FILE"
-echo "  2. GitHub repo variable DEPLOY_PATH=$DOCROOT; secrets SSH_HOST=<this IP>, SSH_USER=deploy, SSH_PORT=22"
-echo "  3. Cloudflare DNS: A record for ${APP_DOMAIN%%.*} -> this IP"
+echo "  2. Cloudflare DNS: A record for ${APP_DOMAIN%%.*} -> this IP"
+echo "  Pushes to $BRANCH go live within a minute (journalctl -u yardpicker-pull)"
