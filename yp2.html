@@ -131,7 +131,29 @@ img#prev{display:none;width:100%;max-height:180px;object-fit:contain;background:
 <!-- STEP 1 -->
 
 <div class="section">
-  <div class="label">STEP 1 OF 3 — IMPORT YOUR YARD'S INVENTORY</div>
+  <div class="label">STEP 1 OF 3 — ADD THE CARS YOU SEE</div>
+  <div class="callout">
+    Walk the rows and add each car. A VIN gives the best results (exact engine, trim and drivetrain). It's on the dashboard plate through the windshield, or the driver door jamb sticker.
+  </div>
+  <button class="btn g" id="bVinCam" style="font-size:16px;padding:20px;letter-spacing:1px">📷  SCAN VIN</button>
+  <input type="file" id="fv" accept="image/*" capture="environment" style="display:none">
+  <div style="display:flex;gap:8px;margin-bottom:10px">
+    <input type="text" id="vinIn" placeholder="or type the 17-character VIN" maxlength="20" autocorrect="off" autocapitalize="characters" spellcheck="false" style="flex:1;margin-bottom:0;text-transform:uppercase;font-family:monospace">
+    <button class="btn w" id="bVinAdd" style="width:auto;margin-bottom:0;padding:12px 16px">Add</button>
+  </div>
+  <div style="font-size:10px;color:#555;letter-spacing:1px;margin:14px 0 6px">NO VIN? ENTER YEAR, MAKE, MODEL ↓</div>
+  <div style="display:flex;gap:8px">
+    <input type="number" id="ymmYear" placeholder="Year" min="1950" max="2030" inputmode="numeric" style="width:80px;flex:none">
+    <input type="text" id="ymmMake" list="makeList" placeholder="Make" autocorrect="off" autocapitalize="characters" spellcheck="false" style="flex:1">
+  </div>
+  <input type="text" id="ymmModel" list="modelList" placeholder="Model" autocorrect="off" autocapitalize="characters" spellcheck="false">
+  <datalist id="makeList"></datalist>
+  <datalist id="modelList"></datalist>
+  <button class="btn w" id="bYmmAdd">+  Add car</button>
+</div>
+
+<div class="section">
+  <div class="label">OR IMPORT A PICK YOUR PART INVENTORY</div>
 
   <div class="callout">
     Open <a href="https://www.pyp.com" target="_blank">pyp.com</a> → your yard → <strong>View Inventory</strong> → copy the URL from Safari's address bar → paste below.
@@ -344,7 +366,7 @@ var EFEE=0.1325,ESHIP=25;
 var EPN_CAMPID='5339163850';
 // Wrap an ebay.com URL with EPN affiliate tracking params (US marketplace).
 function epn(u){return EPN_CAMPID?u+'&mkcid=1&mkrid=711-53200-19255-0&siteid=0&campid='+EPN_CAMPID+'&toolid=10001&mkevt=1':u;}
-var vehicles=[],results=[],offset=0,imgB64=null,imgMime='image/jpeg',currentSlug='';
+var vehicles=[],results=[],imgB64=null,imgMime='image/jpeg',currentSlug='';
 var fmt=function(n){return'$'+Math.round(n).toLocaleString();};
 var fmtD=function(n){return'$'+Number(n).toFixed(2);};
 
@@ -356,7 +378,7 @@ function clrLog(){var e=document.getElementById('log');e.textContent='';e.style.
 function S(type,msg){var e=document.getElementById('st');e.className='st '+(type||'');e.textContent=msg;e.style.display=msg?'block':'none';}
 
 function gotVehicles(v){
-  vehicles=v; results=[]; offset=0;
+  vehicles=v; results=[];
   document.getElementById('step2').style.display='block';
   document.getElementById('step3').style.display='none';
   document.getElementById('results').innerHTML='';
@@ -368,6 +390,111 @@ function gotVehicles(v){
 }
 
 var filtered = [];
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+// Add one car to the list without clearing earlier results.
+function addVehicle(v){
+  if(v.vin&&vehicles.some(function(x){return x.vin===v.vin;})){S('er','That car is already on your list.');return;}
+  vehicles.push(v);
+  document.getElementById('step2').style.display='block';
+  filterVlist();
+  S('ok','Added '+v.year+' '+v.make+' '+v.model+'. '+vehicles.length+' car'+(vehicles.length>1?'s':'')+' on your list.');
+  if(window.umami)umami.track('car_added',{via:v.vin?'vin':'manual'});
+}
+
+// ── VIN ───────────────────────────────────────────────────────
+function decodeVin(vin){
+  var btn=document.getElementById('bVinAdd'); btn.disabled=true;
+  S('ld','Looking up VIN...');
+  var x=new XMLHttpRequest();
+  x.open('GET','/vin.php?vin='+encodeURIComponent(vin),true);
+  x.timeout=20000;
+  x.ontimeout=x.onerror=function(){btn.disabled=false;S('er','VIN lookup failed. Check your connection.');};
+  x.onload=function(){
+    btn.disabled=false;
+    var d;try{d=JSON.parse(x.responseText);}catch(e){S('er','Bad response from server.');return;}
+    if(d.error||!d.vehicle){S('er',d.error||'VIN lookup failed.');return;}
+    document.getElementById('vinIn').value='';
+    addVehicle(d.vehicle);
+  };
+  x.send();
+}
+document.getElementById('bVinAdd').onclick=function(){
+  var vin=document.getElementById('vinIn').value.toUpperCase().replace(/[\s\-]+/g,'');
+  if(!/^[A-HJ-NPR-Z0-9]{17}$/.test(vin)){S('er','A VIN is 17 letters and numbers (no I, O or Q).');return;}
+  decodeVin(vin);
+};
+
+// Photo of the VIN plate -> Claude reads it -> user sees it in the box -> decode.
+// The check digit catches most misreads, so a bad read fails loudly.
+document.getElementById('bVinCam').onclick=function(){
+  if(!authUser){openAuth('login');S('er','Sign in to scan VINs (scanning is free).');return;}
+  document.getElementById('fv').click();
+};
+document.getElementById('fv').onchange=function(e){
+  var file=e.target.files[0]; this.value='';
+  if(!file)return;
+  var btn=document.getElementById('bVinCam'); btn.disabled=true;
+  S('ld','Reading VIN from photo...');
+  var r=new FileReader();
+  r.onerror=function(){btn.disabled=false;S('er','Could not read photo.');};
+  r.onload=function(ev){
+    var img=new Image();
+    img.onerror=function(){btn.disabled=false;S('er','Could not load photo.');};
+    img.onload=function(){
+      var c=document.createElement('canvas');
+      var k=Math.min(1600/Math.max(img.width,img.height),1);
+      c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      api({mode:'vin_ocr',image:c.toDataURL('image/jpeg',0.85).split(',')[1]},function(err,txt){
+        btn.disabled=false;
+        if(err){S('er',err);return;}
+        var vin=null;
+        try{var s=txt.indexOf('{'),t=txt.lastIndexOf('}');vin=JSON.parse(txt.slice(s,t+1)).vin;}catch(x){}
+        if(!vin){S('er','Couldn’t read a VIN. Get closer, avoid glare, or type it in.');return;}
+        document.getElementById('vinIn').value=vin;
+        decodeVin(vin);
+      });
+    };
+    img.src=ev.target.result;
+  };
+  r.readAsDataURL(file);
+};
+
+// ── YEAR / MAKE / MODEL ───────────────────────────────────────
+(function(){
+  var makes=['ACURA','AUDI','BMW','BUICK','CADILLAC','CHEVROLET','CHRYSLER','DODGE','FIAT','FORD','GENESIS','GMC','HONDA','HUMMER','HYUNDAI','INFINITI','ISUZU','JAGUAR','JEEP','KIA','LAND ROVER','LEXUS','LINCOLN','MAZDA','MERCEDES-BENZ','MERCURY','MINI','MITSUBISHI','NISSAN','OLDSMOBILE','PLYMOUTH','PONTIAC','PORSCHE','RAM','SAAB','SATURN','SCION','SMART','SUBARU','SUZUKI','TESLA','TOYOTA','VOLKSWAGEN','VOLVO'];
+  document.getElementById('makeList').innerHTML=makes.map(function(m){return '<option value="'+m+'">';}).join('');
+})();
+var modelsKey='';
+function loadModels(){
+  var y=document.getElementById('ymmYear').value.trim(), m=document.getElementById('ymmMake').value.trim().toUpperCase();
+  if(!/^\d{4}$/.test(y)||m.length<2||y+'|'+m===modelsKey)return;
+  modelsKey=y+'|'+m;
+  var x=new XMLHttpRequest();
+  x.open('GET','/vin.php?make='+encodeURIComponent(m)+'&year='+y,true);
+  x.onload=function(){
+    var d;try{d=JSON.parse(x.responseText);}catch(e){return;}
+    if(!d.models)return;
+    document.getElementById('modelList').innerHTML=d.models.map(function(n){return '<option value="'+esc(n)+'">';}).join('');
+  };
+  x.send();
+}
+document.getElementById('ymmYear').onchange=loadModels;
+document.getElementById('ymmMake').onchange=loadModels;
+document.getElementById('bYmmAdd').onclick=function(){
+  var y=document.getElementById('ymmYear').value.trim();
+  var mk=document.getElementById('ymmMake').value.trim().toUpperCase();
+  var md=document.getElementById('ymmModel').value.trim().toUpperCase();
+  var maxY=new Date().getFullYear()+1;
+  if(!/^\d{4}$/.test(y)||+y<1950||+y>maxY){S('er','Enter a 4-digit year.');return;}
+  if(!mk||!md){S('er','Enter the make and model.');return;}
+  var ok=/^[A-Z0-9 .,\/()&+\-]{1,40}$/;
+  if(!ok.test(mk)||!ok.test(md)){S('er','Use letters and numbers only for make and model.');return;}
+  document.getElementById('ymmModel').value='';
+  addVehicle({year:y,make:mk,model:md});
+};
 
 function renderVlist(){
   filterVlist();
@@ -389,7 +516,8 @@ function filterVlist(){
     d.className = 'vitem';
     d.style.cursor = 'pointer';
     d.setAttribute('data-idx', i);
-    d.innerHTML = '<div style="font-size:18px">🚗</div><div style="flex:1"><div class="vn">'+v.year+' '+v.make+' '+v.model+'</div><div style="display:flex;align-items:center;gap:4px;margin-top:3px"><span style="font-size:10px;color:#999">Row:</span><input type="text" value="'+(v.row||'')+'" placeholder="—" onclick="event.stopPropagation()" oninput="filtered['+i+'].row=this.value" style="width:50px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:3px;background:#f8f8f8;color:#333"></div></div><div id="chk'+i+'" style="font-size:16px;color:#333">○</div>';
+    var det = [v.trim, v.engine, v.drive].filter(function(s){return s;}).join(' · ');
+    d.innerHTML = '<div style="font-size:18px">'+(v._done?'✅':'🚗')+'</div><div style="flex:1"><div class="vn">'+esc(v.year+' '+v.make+' '+v.model)+'</div>'+(det?'<div class="vm">'+esc(det)+'</div>':'')+'<div style="display:flex;align-items:center;gap:4px;margin-top:3px"><span style="font-size:10px;color:#999">Row:</span><input type="text" value="'+esc(v.row||'')+'" placeholder="—" onclick="event.stopPropagation()" oninput="filtered['+i+'].row=this.value" style="width:50px;font-size:11px;padding:2px 4px;border:1px solid #ddd;border-radius:3px;background:#f8f8f8;color:#333"></div></div><div id="chk'+i+'" style="font-size:16px;color:#333">○</div>';
     d.onclick = function(){
       var idx = parseInt(this.getAttribute('data-idx'));
       filtered[idx]._sel = !filtered[idx]._sel;
@@ -400,8 +528,6 @@ function filterVlist(){
     el.appendChild(d);
   });
 
-  // Reset offset when filter changes
-  offset = 0;
   updateAnalyzeBtn();
 }
 
@@ -420,7 +546,7 @@ function updateAnalyzeBtn(){
   } else {
     btn.textContent = '⚡  ANALYZE VEHICLES';
   }
-  var rem = filtered.length - offset;
+  var rem = filtered.filter(function(v){ return !v._done; }).length;
   if(bmore.style.display !== 'none'){
     bmore.textContent = 'Load More (' + Math.min(5, rem) + ' next) →';
   }
@@ -553,17 +679,17 @@ function runAnalyze(){
   // Use selected vehicles if any, otherwise use filtered list
   var sel = filtered.filter(function(v){ return v._sel; });
   var pool = sel.length > 0 ? sel : filtered;
-  var batch = pool.slice(offset, offset+5);
+  var batch = pool.filter(function(v){ return !v._done; }).slice(0, 5);
   if(!batch.length){S('er','No more vehicles to analyze.');return;}
   if(window.umami)umami.track('analyze_clicked',{count:batch.length});
   document.getElementById('bAnalyze').disabled=true;
   document.getElementById('bMore').disabled=true;
   var rate=parseFloat(document.getElementById('rate').value)||20;
-  var lines=batch.map(function(v,i){return 'Car '+i+': '+v.year+' '+v.make+' '+v.model+(v.row?' Row '+v.row:'');}).join('\n');
   S('ld','Analyzing '+batch.length+' vehicles... (~30 seconds)');
   L('\n🔍 Analyzing: '+batch.map(function(v){return v.year+' '+v.make+' '+v.model;}).join(', '));
   L('⏳ Waiting for AI...');
-  api({model:'claude-haiku-4-5-20251001',max_tokens:8000,messages:[{role:'user',content:'You are a junkyard parts expert. For each vehicle pick the 10 most profitable parts to pull and sell on eBay.\n\nVehicles:\n'+lines+'\n\nYou MUST choose part names ONLY from this list — use the EXACT name and copy the lkqPrice shown into your JSON:\nA/C Compressor ($84.09), A/C Condenser ($62.49), A/C Evaporator ($43.99), ABS Module ($106.19), Air Flow Meter ($51.99), Airbag Sensor ($55.89), Alternator ($59.39), Amplifier ($46.79), Axle Assembly Front ($297.59), Axle Assembly Rear ($292.59), Axle Shaft ($50.79), Back Glass Regulator (Electric) ($62.39), Battery ($44.49), Battery (Hybrid) ($452.99), Brake Caliper ($40.39), Brake Rotor ($21.19), Bumper Cover Front ($93.59), Bumper Cover Rear ($93.59), CV Axle Shaft ($50.79), Camshaft ($75.99), Carburetor ($76.49), Carrier Assembly ($154.42), Center Console ($27.29), Center Pillar ($118.29), Chassis Control Module ($63.49), Clock Spring ($58.49), Coil Pack ($62.79), Control Arm Lower ($38.79), Control Arm Upper ($51.79), Crankshaft ($131.29), Cylinder Head ($111.79), Dash Panel ($101.39), DC Converter (Hybrid) ($183.81), Decklid/Tailgate ($108.79), Differential ($292.59), Distributor ($52.39), Door Assembly Back ($138.69), Door Front ($108.79), Door Rear ($108.79), Drive Shaft ($66.09), ECU / PCM ($92.09), Electric Power Steering Pump ($74.49), Engine (Long Block) ($468.89), Exhaust Manifold ($49.79), Fan Clutch ($27.29), Fender ($86.64), Flywheel ($43.99), Front Bumper (Steel) ($128.29), Fuel Pump ($60.89), Fuel Pump (Direct Injection) ($101.19), Fuel Tank ($46.79), Fuse Box ($33.79), GPS / Navigation Screen ($79.29), Harmonic Balancer ($64.99), Headlight ($53.29), Heater Core ($34.89), Hood ($117.89), Hub Assembly ($34.79), Independent Rear Suspension ($396.06), Instrument Cluster ($40.29), Intake Manifold ($71.89), Intercooler ($102.29), Leaf Spring ($46.29), Mirror (Side View) ($53.29), Oil Pump ($37.99), Power Brake Booster ($57.29), Power Steering Pump ($47.89), Quarter Panel ($177.24), Radiator ($67.19), Radiator Core Support ($94.74), Radiator/Condenser Fan (Dual) ($106.79), Radio with Display ($66.29), Rear Bumper (Steel) ($128.29), Ring and Pinion Gear ($151.39), Roof ($170.68), Seat (Front) ($59.79), Seat (Rear) ($71.49), Seat (Third Row) ($85.79), Shock Absorber ($20.79), Sliding Door Motor ($64.99), Spindle/Knuckle ($58.29), Stabilizer Bar ($40.99), Starter Motor ($59.39), Steering Column ($80.39), Steering Rack ($82.79), Strut Assembly ($53.39), Strut (Air) ($68.69), Suspension Crossmember ($121.79), Tail Light ($40.29), Temperature Control ($46.79), Throttle Body ($71.29), Torque Converter ($307.99), Transfer Case ($253.20), Transfer Case Motor ($69.79), Transmission (Auto) ($266.33), Transmission (Manual) ($266.33), Transmission Solenoid Pack ($87.09), Transmission Valve Body ($131.29), Turbocharger ($140.00), Water Pump ($49.39), Wheel (Aluminum) ($65.69), Wheel (Steel) ($33.49), Window Regulator Front (Electric) ($47.29), Window Regulator Rear (Electric) ($62.39), Wiring Harness (Body) ($70.99), Wiring Harness (Dash) ($59.79), Wiring Harness (Engine) ($71.29)\n\nReturn ONLY a JSON array, no markdown. Copy lkqPrice exactly from the list above:\n[{"carIndex":0,"parts":[{"name":"ECU / PCM","reason":"High demand, sells fast","ebayAvg":420,"ebayLow":280,"ebayHigh":600,"lkqPrice":92.09}]}]\nExactly 10 parts per car. Prices in whole USD.'}]},
+  // The server builds the prompt; we only send the cars.
+  api({mode:'analyze',vehicles:batch.map(function(v){return{year:v.year,make:v.make,model:v.model,row:v.row||'',trim:v.trim||'',engine:v.engine||'',drive:v.drive||'',transmission:v.transmission||''};})},
   function(err,txt){
     document.getElementById('bAnalyze').disabled=false;
     document.getElementById('bMore').disabled=false;
@@ -623,8 +749,9 @@ function runAnalyze(){
     results=results.concat(newRes).sort(function(a,b){return b.totalProfit-a.totalProfit;});
     var sel2=filtered.filter(function(v){return v._sel;});
     var pool2=sel2.length>0?sel2:filtered;
-    offset+=5;
-    var rem=pool2.length-offset;
+    batch.forEach(function(v){v._done=true;});
+    filterVlist();
+    var rem=pool2.filter(function(v){return !v._done;}).length;
     document.getElementById('step3').style.display='block';
     S('ok','Showing '+results.length+' vehicles.'+(rem>0?' '+rem+' more available.':''));
     if(rem>0){
@@ -653,7 +780,7 @@ function renderResults(rate){
     var id='cr'+rank;
     h+='<div class="ccard">';
     h+='<div class="ch" onclick="tc(\''+id+'\','+rank+')">';
-    h+='<div><div class="cn">'+(rank<3?medals[rank]:'#'+(rank+1))+' '+car.year+' '+car.make+' '+car.model+'</div>';
+    h+='<div><div class="cn">'+(rank<3?medals[rank]:'#'+(rank+1))+' '+esc(car.year+' '+car.make+' '+car.model)+'</div>';
     h+='<div class="cm">'+(car.row?'Row '+car.row+' · ':'')+car.totalHours.toFixed(1)+'h · '+fmt(car.pph)+'/hr</div></div>';
     h+='<div style="text-align:right"><div class="cp">'+fmt(car.totalProfit)+'</div>';
     h+='<div style="font-size:10px;color:#333" id="cv'+rank+'">'+(rank===0?'▲':'▼')+'</div></div></div>';

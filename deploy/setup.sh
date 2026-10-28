@@ -129,7 +129,7 @@ $APP_DOMAIN {
 	encode zstd gzip
 
 	# Never serve repo internals or secrets.
-	@private path /.git /.git/* /.github/* /.env* /.htaccess /schema.sql /*.md /deploy/* /probe/*
+	@private path /.git /.git/* /.github/* /.env* /.htaccess /schema.sql /*.md /deploy/* /probe/* /tests/*
 	respond @private 404
 
 	# Same no-cache policy .htaccess applied on Apache.
