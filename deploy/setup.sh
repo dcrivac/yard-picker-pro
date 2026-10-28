@@ -148,6 +148,14 @@ CADDY
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 systemctl reload caddy || systemctl restart caddy
 
+# The app scrapes pyp.com, which blocks some datacenter IP ranges. Check now.
+PYP_CODE="$(curl -s -o /tmp/pyp-check.html -w '%{http_code}' -A 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15' https://www.pyp.com/inventory/chula-vista-1264/ || true)"
+if [ "$PYP_CODE" = "200" ] && ! grep -q 'Just a moment' /tmp/pyp-check.html; then
+  echo "== PYP CHECK: PASS (pyp.com inventory reachable from this server)"
+else
+  echo "== PYP CHECK: FAIL (HTTP $PYP_CODE, likely a bot challenge). The scraper will not work from this IP."
+fi
+
 echo "== Done. Next steps:"
 echo "  1. Add the API keys to $ENV_FILE"
 echo "  2. GitHub repo variable DEPLOY_PATH=$DOCROOT; secrets SSH_HOST=<this IP>, SSH_USER=deploy, SSH_PORT=22"
