@@ -4,7 +4,11 @@ $envFile = __DIR__ . '/.env.php';
 if (is_file($envFile)) { require $envFile; }
 require_once __DIR__ . '/ebay-prices.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/analyze-lib.php';
 define('ANTHROPIC_KEY', getenv('ANTHROPIC_API_KEY') ?: '');
+// The server picks the model; clients only send structured data.
+// claude-haiku-4-5 is past its earliest retirement date (2026-10-15).
+define('MODEL', 'claude-haiku-5-5');
 // Daily Anthropic spend ceiling (USD) across ALL users — circuit breaker
 // against a viral-traffic surprise bill. Approximate; based on token usage
 // returned by Anthropic. Tune via env var; default $5/day.
@@ -111,28 +115,31 @@ if (getDailyCost() >= DAILY_COST_CEILING_USD) {
 }
 
 // Bound request body size (Content-Length is advisory; we re-check after read).
+// A VIN photo is ~200-600KB of base64; everything else is a few KB.
 $declared = isset($_SERVER['CONTENT_LENGTH']) ? (int)$_SERVER['CONTENT_LENGTH'] : 0;
-if ($declared > 20000) { fail(413, 'Body too large (declared ' . $declared . ')'); }
+if ($declared > 2000000) { fail(413, 'Body too large (declared ' . $declared . ')'); }
 
 $body = file_get_contents('php://input');
 if (!$body) { fail(400, 'Empty body'); }
-if (strlen($body) > 20000) { fail(413, 'Body too large (' . strlen($body) . ' bytes)'); }
+if (strlen($body) > 2000000) { fail(413, 'Body too large (' . strlen($body) . ' bytes)'); }
 
 $decoded = json_decode($body, true);
 if (!$decoded) { fail(400, 'Invalid JSON'); }
 
-// Validate request shape and model allowlist before paying upstream.
-if (!isset($decoded['model']) || !is_string($decoded['model'])) { fail(400, 'Missing model'); }
-$modelOk = false;
-foreach (['claude-haiku-', 'claude-sonnet-'] as $prefix) {
-    if (strncmp($decoded['model'], $prefix, strlen($prefix)) === 0) { $modelOk = true; break; }
-}
-if (!$modelOk) { fail(400, 'Disallowed model: ' . $decoded['model']); }
-if (!isset($decoded['messages']) || !is_array($decoded['messages']) || count($decoded['messages']) === 0) {
-    fail(400, 'Missing or empty messages');
-}
-if (isset($decoded['max_tokens']) && (!is_int($decoded['max_tokens']) || $decoded['max_tokens'] > 8192 || $decoded['max_tokens'] < 1)) {
-    fail(400, 'max_tokens out of range: ' . var_export($decoded['max_tokens'], true));
+// Two request shapes, both built into prompts here so the endpoint can't be
+// used to send arbitrary prompts on our key:
+//   {"mode":"analyze","vehicles":[{year,make,model,row?,trim?,engine?,drive?,transmission?}, ...]}
+//   {"mode":"vin_ocr","image":"<base64 jpeg>"}
+$mode = isset($decoded['mode']) ? $decoded['mode'] : '';
+if ($mode === 'analyze') {
+    list($vehicles, $verr) = validateVehicles(isset($decoded['vehicles']) ? $decoded['vehicles'] : null);
+    if ($verr) { fail(400, 'Bad vehicles: ' . $verr); }
+} elseif ($mode === 'vin_ocr') {
+    $img = isset($decoded['image']) && is_string($decoded['image']) ? $decoded['image'] : '';
+    $raw = base64_decode($img, true);
+    if ($raw === false || strncmp($raw, "\xFF\xD8\xFF", 3) !== 0) { fail(400, 'vin_ocr image must be base64 JPEG'); }
+} else {
+    fail(400, 'Unknown mode: ' . var_export($mode, true));
 }
 
 // Maps our curated part names to PYP's raw price-list descriptions, for the
@@ -369,15 +376,47 @@ function findLKQPrice($name, $lkq) {
 // calendar month; purchased credits never expire and are spent only after
 // the free allowance is used up. Deduction happens AFTER a successful
 // Anthropic response (below), so failed calls are never charged.
+// Reading a VIN photo needs sign-in (it costs us tokens) but no credit.
 $me = currentUser();
 if (!$me) { fail(401, 'Sign in required'); }
 
 $pdo = db();
 list($freeRemaining, $paidCredits, $totalAvail) = creditStatus($me);
-if ($totalAvail <= 0) {
+if ($mode === 'analyze' && $totalAvail <= 0) {
     header('X-Credits-Remaining: 0');
     fail(402, 'Out of credits for user ' . $me['id']);
 }
+
+// Override the hardcoded Chula Vista prices with this yard's live prices.
+// Keeps our curated $LKQ keys (so Claude part-name matching stays exact) and
+// only swaps the values; parts the live list lacks keep the fallback price.
+$slug = isset($_GET['slug']) ? trim($_GET['slug']) : '';
+if ($slug !== '' && preg_match('/^[a-z0-9-]+$/i', $slug)) {
+    $live = fetchYardPrices($slug);
+    if ($live) {
+        $liveUpper = [];
+        foreach ($live as $desc => $price) $liveUpper[strtoupper(trim($desc))] = $price;
+        foreach ($LKQ as $ourName => $oldPrice) {
+            $pypName = isset($PYP_NAME_MAP[$ourName]) ? $PYP_NAME_MAP[$ourName] : strtoupper($ourName);
+            $k = strtoupper(trim($pypName));
+            if (isset($liveUpper[$k])) $LKQ[$ourName] = $liveUpper[$k];
+        }
+    }
+}
+
+// ── BUILD THE REQUEST ─────────────────────────────────────────────────────
+if ($mode === 'analyze') {
+    $vehiclesByIndex = $vehicles;   // carIndex in Claude's reply = position here
+    $content = buildAnalysisPrompt($vehicles, $PROMPT_PARTS, $LKQ);
+    $maxTokens = 8000;
+} else {
+    $content = [
+        ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => 'image/jpeg', 'data' => $img]],
+        ['type' => 'text', 'text' => 'This photo should show a vehicle VIN (dashboard plate, door jamb sticker, or title). Read the 17-character VIN exactly. VINs never contain I, O or Q. Return ONLY JSON: {"vin":"1HGCM82633A004352"} or {"vin":null} if no VIN is readable.'],
+    ];
+    $maxTokens = 100;
+}
+$body = json_encode(['model' => MODEL, 'max_tokens' => $maxTokens, 'messages' => [['role' => 'user', 'content' => $content]]]);
 
 // ── CALL ANTHROPIC ────────────────────────────────────────────────────────
 $ch = curl_init('https://api.anthropic.com/v1/messages');
@@ -409,8 +448,15 @@ if ($httpCode < 200 || $httpCode >= 300) {
 
 // Tally this call's token cost toward the daily ceiling.
 $parsedResp = json_decode($response, true);
-if (isset($parsedResp['usage']) && isset($decoded['model'])) {
-    recordCost($decoded['model'], $parsedResp['usage']);
+if (isset($parsedResp['usage'])) {
+    recordCost(MODEL, $parsedResp['usage']);
+}
+
+// VIN reads are free: hand the reply straight back.
+if ($mode !== 'analyze') {
+    http_response_code($httpCode);
+    echo $response;
+    exit;
 }
 
 // Deduct 1 credit now that the call succeeded. Spend the free allowance
@@ -426,34 +472,6 @@ if ($freeRemaining > 0) {
     $paidCredits = max(0, $paidCredits - 1);
 }
 header('X-Credits-Remaining: ' . ($freeRemaining + $paidCredits));
-
-// Build carIndex → vehicle map by parsing the "Car N: YYYY MAKE MODEL [Row X]"
-// lines from the prompt. Used to construct eBay search queries per part.
-$vehiclesByIndex = [];
-if (isset($decoded['messages'][0]['content']) && is_string($decoded['messages'][0]['content'])) {
-    if (preg_match_all('/^Car (\d+): (\d{4}) (\S+) (.+?)(?:\s+Row\s+\S+)?$/m', $decoded['messages'][0]['content'], $vm, PREG_SET_ORDER)) {
-        foreach ($vm as $m) {
-            $vehiclesByIndex[(int)$m[1]] = ['year' => $m[2], 'make' => $m[3], 'model' => trim($m[4])];
-        }
-    }
-}
-
-// Override the hardcoded Chula Vista prices with this yard's live prices.
-// Keeps our curated $LKQ keys (so Claude part-name matching stays exact) and
-// only swaps the values; parts the live list lacks keep the fallback price.
-$slug = isset($_GET['slug']) ? trim($_GET['slug']) : '';
-if ($slug !== '' && preg_match('/^[a-z0-9-]+$/i', $slug)) {
-    $live = fetchYardPrices($slug);
-    if ($live) {
-        $liveUpper = [];
-        foreach ($live as $desc => $price) $liveUpper[strtoupper(trim($desc))] = $price;
-        foreach ($LKQ as $ourName => $oldPrice) {
-            $pypName = isset($PYP_NAME_MAP[$ourName]) ? $PYP_NAME_MAP[$ourName] : strtoupper($ourName);
-            $k = strtoupper(trim($pypName));
-            if (isset($liveUpper[$k])) $LKQ[$ourName] = $liveUpper[$k];
-        }
-    }
-}
 
 // ── INJECT LKQ + LIVE EBAY PRICES INTO RESPONSE ───────────────────────────
 $resp = json_decode($response, true);

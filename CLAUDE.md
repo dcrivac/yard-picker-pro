@@ -68,9 +68,15 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## 5. Harness
 
-This project has no automated test/type/lint harness. "Done" means the change renders correctly in a browser (verify with `/browse`) and the HTML is valid.
+"Done" means the change renders correctly in a browser (verify with `/browse`) and the HTML is valid.
 
-If you add tooling later, list the exact commands here.
+Unit tests for the pure PHP helpers (VIN check digit, vPIC parsing, vehicle validation, analysis prompt):
+
+```
+php tests/run.php
+```
+
+They run offline against saved vPIC responses in `tests/fixtures/`.
 
 ## 6. Loops & Autonomy
 
