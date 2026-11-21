@@ -1,6 +1,6 @@
 // Yard Picker Pro on Cloudflare Workers (free plan).
 // Production: `npm run deploy` (worker "yardpicker", D1 "yardpicker").
-// Test:       `npx wrangler deploy --env dev` (worker "yardpicker-dev" on workers.dev).
+// Test:       `npx wrangler deploy --env dev` (worker "yard-picker-dev" on workers.dev).
 // Secrets are never in this file. Set each one with `npx wrangler secret put NAME [--env dev]`:
 //   ANTHROPIC_API_KEY, EBAY_CLIENT_ID, EBAY_CLIENT_SECRET, EBAY_VERIFICATION_TOKEN,
 //   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY, RESEND_FROM
@@ -31,10 +31,10 @@
   ],
   "env": {
     "dev": {
-      "name": "yardpicker-dev",
+      "name": "yard-picker-dev",
       "workers_dev": true,
       "vars": {
-        "APP_ORIGIN": "https://yardpicker-dev.crivac.workers.dev",
+        "APP_ORIGIN": "https://yard-picker-dev.crivac.workers.dev",
         "FREE_MONTHLY": "5",
         "DAILY_COST_CEILING_USD": "1",
         "PBKDF2_ITERATIONS": "100000"
