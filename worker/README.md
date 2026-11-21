@@ -50,6 +50,15 @@ npm test && npm run typecheck
 
 Put local secrets in `.dev.vars` (git-ignored), one `NAME=value` per line.
 
+## Test Worker
+
+`npm run deploy:dev` builds the site, applies the D1 migration to
+`yardpicker-dev` and deploys to https://yardpicker-dev.crivac.workers.dev.
+Run `npx wrangler login` once first. To deploy from GitHub instead, connect
+the repo in Workers & Pages (Workers Builds, free plan: 3,000 build minutes
+a month) with root directory `/worker` and deploy command
+`npm run deploy:dev`.
+
 ## Secrets
 
 Set each with `npx wrangler secret put NAME` (add `--env dev` for the test

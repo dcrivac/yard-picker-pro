@@ -6,6 +6,7 @@
     "assets": "node scripts/copy-assets.mjs",
     "dev": "npm run assets && wrangler dev",
     "deploy": "npm run assets && wrangler deploy",
+    "deploy:dev": "npm run assets && wrangler d1 migrations apply yardpicker-dev --remote --env dev && wrangler deploy --env dev",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply yardpicker --local",
