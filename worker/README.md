@@ -53,11 +53,13 @@ Put local secrets in `.dev.vars` (git-ignored), one `NAME=value` per line.
 ## Test Worker
 
 `npm run deploy:dev` builds the site, applies the D1 migration to
-`yardpicker-dev` and deploys to https://yardpicker-dev.crivac.workers.dev.
+`yardpicker-dev` and deploys the `yard-picker-dev` Worker to
+https://yard-picker-dev.crivac.workers.dev.
 Run `npx wrangler login` once first. To deploy from GitHub instead, connect
 the repo in Workers & Pages (Workers Builds, free plan: 3,000 build minutes
-a month) with root directory `/worker` and deploy command
-`npm run assets && npx wrangler deploy --env dev`. The build token that
+a month) with root directory `/worker`, build command `npm run assets`, deploy
+command `npx wrangler deploy --env dev` and preview command
+`npx wrangler preview --env dev` (or preview builds turned off). The build token that
 Cloudflare creates for Workers Builds has no D1 permission, so database
 migrations run from your own machine (`npm run deploy:dev`), or after you
 add D1 Edit to that token under My Profile > API Tokens.
