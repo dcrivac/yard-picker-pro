@@ -1,0 +1,23 @@
+{
+  "name": "yardpicker-worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "assets": "node scripts/copy-assets.mjs",
+    "dev": "npm run assets && wrangler dev",
+    "deploy": "npm run assets && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply yardpicker --local",
+    "db:migrate:remote": "wrangler d1 migrations apply yardpicker --remote"
+  },
+  "dependencies": {
+    "bcryptjs": "3.0.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261121.1",
+    "typescript": "7.0.2",
+    "vitest": "5.1.1",
+    "wrangler": "4.166.0"
+  }
+}

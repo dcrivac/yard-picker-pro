@@ -1,0 +1,52 @@
+// Yard Picker Pro on Cloudflare Workers (free plan).
+// Production: `npm run deploy` (worker "yardpicker", D1 "yardpicker").
+// Test:       `npx wrangler deploy --env dev` (worker "yardpicker-dev" on workers.dev).
+// Secrets are never in this file. Set each one with `npx wrangler secret put NAME [--env dev]`:
+//   ANTHROPIC_API_KEY, EBAY_CLIENT_ID, EBAY_CLIENT_SECRET, EBAY_VERIFICATION_TOKEN,
+//   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, RESEND_API_KEY, RESEND_FROM
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "yardpicker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": false,
+  "observability": { "enabled": true },
+  // Static pages (copied from the repo root by `npm run assets`). Any path
+  // that isn't a static file, including every *.php path, runs the Worker.
+  "assets": { "directory": "./public", "binding": "ASSETS", "html_handling": "none" },
+  "vars": {
+    "APP_ORIGIN": "https://yardpicker.crivac.com",
+    "FREE_MONTHLY": "5",
+    "DAILY_COST_CEILING_USD": "5",
+    "PBKDF2_ITERATIONS": "100000"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yardpicker",
+      // Create with `npx wrangler d1 create yardpicker` and paste the id here.
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "env": {
+    "dev": {
+      "name": "yardpicker-dev",
+      "workers_dev": true,
+      "vars": {
+        "APP_ORIGIN": "https://yardpicker-dev.crivac.workers.dev",
+        "FREE_MONTHLY": "5",
+        "DAILY_COST_CEILING_USD": "1",
+        "PBKDF2_ITERATIONS": "100000"
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "yardpicker-dev",
+          "database_id": "5f1821fc-6e14-4b12-a14d-9eaa2305ddf7",
+          "migrations_dir": "migrations"
+        }
+      ]
+    }
+  }
+}
