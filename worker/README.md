@@ -57,7 +57,10 @@ Put local secrets in `.dev.vars` (git-ignored), one `NAME=value` per line.
 Run `npx wrangler login` once first. To deploy from GitHub instead, connect
 the repo in Workers & Pages (Workers Builds, free plan: 3,000 build minutes
 a month) with root directory `/worker` and deploy command
-`npm run deploy:dev`.
+`npm run assets && npx wrangler deploy --env dev`. The build token that
+Cloudflare creates for Workers Builds has no D1 permission, so database
+migrations run from your own machine (`npm run deploy:dev`), or after you
+add D1 Edit to that token under My Profile > API Tokens.
 
 ## Secrets
 
