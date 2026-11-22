@@ -9,6 +9,7 @@ import { PROMPT_PARTS } from '../src/lib/tables';
 import { medianFromItems } from '../src/lib/ebay';
 import { hasNextPage, parseInventoryPage, type InvVehicle } from '../src/lib/pyp';
 import { Budget, BudgetExceeded, pool } from '../src/lib/budget';
+import { estimateCostUsd } from '../src/store';
 import { hashPassword, verifyPassword } from '../src/password';
 import { hmacSha256Hex } from '../src/crypto';
 import { verifyStripeSignature } from '../src/routes/stripe';
@@ -129,5 +130,23 @@ describe('Stripe signature', () => {
     expect(await verifyStripeSignature(payload + ' ', `t=${t},v1=${sig}`, secret, t)).toBe('bad');
     expect(await verifyStripeSignature(payload, `t=${t},v1=${sig}`, secret, t + 301)).toBe('old');
     expect(await verifyStripeSignature(payload, '', secret, t)).toBe('missing');
+  });
+});
+
+describe('estimateCostUsd', () => {
+  it('uses Haiku 5.5 list prices', () => {
+    // 1,000 input + 2,000 output tokens: 0.0001 + 0.001
+    expect(estimateCostUsd('claude-haiku-5-5', 1000, 2000)).toBeCloseTo(0.0011, 8);
+  });
+  it('switches Haiku 5.5 to the long-prompt rates above 100K input tokens', () => {
+    expect(estimateCostUsd('claude-haiku-5-5', 200_000, 1000)).toBeCloseTo(0.1025, 8);
+  });
+  it('keeps Haiku 4.5 and older Sonnet prices', () => {
+    expect(estimateCostUsd('claude-haiku-4-5', 1_000_000, 0)).toBeCloseTo(1, 8);
+    expect(estimateCostUsd('claude-sonnet-4-5', 0, 1_000_000)).toBeCloseTo(15, 8);
+  });
+  it('prices Sonnet 5.5 and falls back high for unknown models', () => {
+    expect(estimateCostUsd('claude-sonnet-5-5', 1_000_000, 0)).toBeCloseTo(2, 8);
+    expect(estimateCostUsd('some-new-model', 1_000_000, 0)).toBeCloseTo(3, 8);
   });
 });

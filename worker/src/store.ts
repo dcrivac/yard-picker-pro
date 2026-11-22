@@ -35,11 +35,29 @@ export async function getDailyCost(db: D1Database): Promise<number> {
   return row ? row.usd : 0;
 }
 
+// List prices in USD per million tokens (input, output), from Anthropic's
+// pricing for each model. Haiku 5.5 has a second, higher rate card when the
+// prompt is over 100K tokens. Unknown models fall back to the highest rate
+// listed here, so the daily ceiling errs on the safe side.
+const PRICES: Array<{ match: string; rates: [number, number]; longRates?: [number, number] }> = [
+  { match: 'haiku-5-5', rates: [0.1, 0.5], longRates: [0.5, 2.5] },
+  { match: 'haiku-4-5', rates: [1, 5] },
+  { match: 'sonnet-5', rates: [2, 10] }, // Sonnet 5 and 5.5
+  { match: 'sonnet', rates: [3, 15] }, // older Sonnet models
+];
+const FALLBACK: [number, number] = [3, 15];
+const LONG_PROMPT_TOKENS = 100_000;
+
+export function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const entry = PRICES.find((p) => model.includes(p.match));
+  let [pin, pout] = entry ? entry.rates : FALLBACK;
+  if (entry?.longRates && inputTokens > LONG_PROMPT_TOKENS) [pin, pout] = entry.longRates;
+  return (inputTokens * pin + outputTokens * pout) / 1_000_000;
+}
+
 export async function recordCost(db: D1Database, model: string, usage: { input_tokens?: number; output_tokens?: number } | undefined): Promise<void> {
   if (!usage || usage.input_tokens == null || usage.output_tokens == null) return;
-  // Same approximation as the PHP app: Haiku $1/$5, Sonnet $3/$15 per million tokens.
-  const [pin, pout] = model.includes('sonnet') ? [3, 15] : [1, 5];
-  const cost = (usage.input_tokens * pin + usage.output_tokens * pout) / 1_000_000;
+  const cost = estimateCostUsd(model, usage.input_tokens, usage.output_tokens);
   await db.prepare('INSERT INTO daily_cost (day, usd) VALUES (?, ?) ON CONFLICT(day) DO UPDATE SET usd = usd + excluded.usd').bind(utcDay(), cost).run();
 }
 
